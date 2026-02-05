@@ -1,36 +1,3 @@
-<div align="right">
-  <details>
-    <summary >🌐 Language</summary>
-    <div>
-      <div align="center">
-        <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=en">English</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=zh-CN">简体中文</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=zh-TW">繁體中文</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=ja">日本語</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=ko">한국어</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=hi">हिन्दी</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=th">ไทย</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=fr">Français</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=de">Deutsch</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=es">Español</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=it">Italiano</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=ru">Русский</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=pt">Português</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=nl">Nederlands</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=pl">Polski</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=ar">العربية</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=fa">فارسی</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=tr">Türkçe</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=vi">Tiếng Việt</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=id">Bahasa Indonesia</a>
-        | <a href="https://openaitx.github.io/view.html?user=wlfeng0509&project=QuantVGGT&lang=as">অসমীয়া</
-      </div>
-    </div>
-  </details>
-</div>
-
-
-
 <h1 align="center">🚀 Fast-SAM3D: 3Dfy Anything in Images but Faster</h1>
 
 <p align="center">
