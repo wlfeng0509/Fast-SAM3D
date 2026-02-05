@@ -15,7 +15,7 @@
 
 
 <div align="center">
-Weilun Feng <sup>*</sup> ,Mingqiang Wu**<sup>*</sup>, Zhiliang Chen**, **Chuanguang Yang**<sup>✉</sup>, **Haotong Qin**, **Yuqi Li**, **Xiaokun Liu**, **Guoxin Fan**, **Zhulin An**<sup>✉</sup>, **Libo Huang**, **Yulun Zhang**, **Michele Magno**, **Yongjun Xu
+Weilun Feng <sup>*</sup> ,Mingqiang Wu<sup>*</sup>, Zhiliang Chen, Chuanguang Yang<sup>✉</sup>, Haotong Qin, Yuqi Li, Xiaokun Liu, Guoxin Fan, Zhulin An<sup>✉</sup>, Libo Huang, Yulun Zhang, Michele Magno, Yongjun Xu
 
 </div>
 
