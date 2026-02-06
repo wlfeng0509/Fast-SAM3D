@@ -275,11 +275,14 @@ python infer_scene.py \
 If you find this work helpful, please consider citing:
 
 ```bibtex
-@article{feng2026fastsam3d,
-  title={Fast-SAM3D: 3Dfy Anything in Images but Faster},
-  author={Feng, Weilun and Wu, Mingqiang and Chen, Zhiliang and Yang, Chuanguang and Qin, Haotong and Li, Yuqi and Liu, Xiaokun and Fan, Guoxin and An, Zhulin and Huang, Libo and Zhang, Yulun and Magno, Michele and Xu, Yongjun},
-  journal={arXiv preprint arXiv:xxxx.xxxxx},
-  year={2026}
+@misc{feng2026fastsam3d3dfyimagesfaster,
+      title={Fast-SAM3D: 3Dfy Anything in Images but Faster}, 
+      author={Weilun Feng and Mingqiang Wu and Zhiliang Chen and Chuanguang Yang and Haotong Qin and Yuqi Li and Xiaokun Liu and Guoxin Fan and Zhulin An and Libo Huang and Yulun Zhang and Michele Magno and Yongjun Xu},
+      year={2026},
+      eprint={2602.05293},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2602.05293}, 
 }
 ```
 
