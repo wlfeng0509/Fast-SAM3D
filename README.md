@@ -1,16 +1,14 @@
 <h1 align="center">🚀 Fast-SAM3D: 3Dfy Anything in Images but Faster</h1>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/xxxx.xxxxx">
+  <a href="https://arxiv.org/abs/2602.05293">
     <img src="https://img.shields.io/badge/arXiv-Paper-red?style=flat-square" alt="Paper"/>
   </a>
-  <a href="https://github.com/wlfeng0509/Fast-SAM3D-3Dfy-Anything-in-Images-but-Faster">
+  <a href="https://github.com/wlfeng0509/Fast-SAM3D">
     <img src="https://img.shields.io/badge/GitHub-Code-blue?style=flat-square&logo=github" alt="Code"/>
   </a>
-  <a href="https://huggingface.co/your-model">
-    <img src="https://img.shields.io/badge/HuggingFace-Model-yellow?style=flat-square" alt="Model"/>
-  </a>
 </p>
+
 
 
 <div align="center">
