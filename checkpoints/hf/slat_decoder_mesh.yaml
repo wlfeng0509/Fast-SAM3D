@@ -1,0 +1,13 @@
+
+_target_: sam3d_objects.model.backbone.tdfy_dit.models.structured_latent_vae.decoder_mesh.SLatMeshDecoderTdfyWrapper
+resolution: 64
+model_channels: 768 
+latent_channels: 8
+num_blocks: 12  
+num_heads: 12
+mlp_ratio: 4
+attn_mode: swin
+window_size: 8
+representation_config:
+  use_color: true 
+use_fp16: true

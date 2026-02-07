@@ -1,0 +1,62 @@
+module:
+  condition_embedder:
+    backbone:
+
+      _target_: sam3d_objects.model.backbone.dit.embedder.embedder_fuser.EmbedderFuser
+      embedder_list:
+      - - _target_: sam3d_objects.model.backbone.dit.embedder.dino.Dino
+          dino_model: dinov2_vitl14_reg
+          input_size: 518
+          normalize_images: true
+          prenorm_features: true
+        - - - image  
+            - cropped  
+          - - rgb_image
+            - full  
+      - - _target_: sam3d_objects.model.backbone.dit.embedder.dino.Dino
+          dino_model: dinov2_vitl14_reg
+          input_size: 518
+          normalize_images: true
+          prenorm_features: true
+        - - - mask
+            - cropped   
+          - - rgb_image_mask  
+            - full  
+      projection_net_hidden_dim_multiplier: 4.0
+      use_pos_embedding: learned
+  generator:
+    backbone:
+      _target_: sam3d_objects.model.backbone.generator.flow_matching.model.FlowMatching
+      inference_steps: 12 
+      reverse_fn:
+     
+        _target_: sam3d_objects.model.backbone.generator.classifier_free_guidance.ClassifierFreeGuidance
+        backbone:
+          _target_: sam3d_objects.model.backbone.tdfy_dit.models.structured_latent_flow.SLatFlowModelTdfyWrapper
+          cond_channels: 1024
+          condition_embedder: null
+          force_zeros_cond: true
+          in_channels: 8
+          io_block_channels:
+          - 128
+          mlp_ratio: 4
+          model_channels: 1024 
+          num_blocks: 24 #
+          num_heads: 16
+          num_io_res_blocks: 2
+          out_channels: 8
+          patch_size: 2 
+          pe_mode: ape  
+          qk_rms_norm: true
+          resolution: 64 
+          use_fp16: true
+        p_unconditional: 0.0
+        strength: 0.0
+        unconditional_handling: add_flag
+      sigma_min: 0.0
+      time_scale: 1000.0
+      training_time_sampler_fn:
+        _partial_: true
+        _target_: sam3d_objects.model.backbone.generator.flow_matching.model.lognorm_sampler
+        mean: -1.0
+        std: 1.0
