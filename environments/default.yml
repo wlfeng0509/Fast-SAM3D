@@ -13,7 +13,7 @@ dependencies:
   - c-compiler=1.7.0=hd590300_1
   - ca-certificates=2025.1.31=hbcca054_0
   - cairo=1.18.0=h3faef2a_03
-  - cuda-cccl=12.1.109=ha770c72_0'
+  - cuda-cccl=12.1.109=ha770c72_0
   - cuda-cccl-impl=2.0.1=ha770c72_1
   - cuda-cccl_linux-64=12.1.109=ha770c72_0
   - cuda-command-line-tools=12.1.1=ha770c72_0
