@@ -1,0 +1,32 @@
+# Bytecode files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+.env/
+
+# macOS 文件
+.DS_Store
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Model / cache files
+*.pth
+*.pt
+*.ckpt
+torch_cache/
+*.h5
+
+# Output directories
+/output/
+Look-scene/
+*.mp4
+
+# Temporary files
+*.tmp
+*.swp
