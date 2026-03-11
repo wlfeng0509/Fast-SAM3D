@@ -1,5 +1,6 @@
 CUDA_VISIBLE_DEVICES=4 python /data3/wmq/Fast-sam3d-objects/notebook/infer_scene.py \
     --image_dir /data3/wmq/Fast-sam3d-objects/notebook/images/m-sofa\
+    --mask_index 14 \
     --output_dir /data3/wmq/Fast-sam3d-objects/Look-scene \
     --ss_cache_stride 3 \
     --ss_warmup 2 \

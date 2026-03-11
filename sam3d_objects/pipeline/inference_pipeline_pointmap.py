@@ -96,6 +96,7 @@ class InferencePipelinePointMap(InferencePipeline):
         self.depth_model = depth_model
         self.layout_post_optimization_method = layout_post_optimization_method
         self.clip_pointmap_beyond_scale = clip_pointmap_beyond_scale
+        self.hfer_2d = 0
         super().__init__(*args, **kwargs)
 
 
