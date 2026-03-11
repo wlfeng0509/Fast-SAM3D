@@ -7,14 +7,9 @@ import numpy as np
 import argparse
 import imageio
 from omegaconf import OmegaConf
-
-
 from inference import Inference, ready_gaussian_for_video_rendering, load_image, load_masks, load_hfers, make_scene, render_video
-from fft.fft2d import calculate_hfer_robust
-
-
 sys.path.append("notebook")
-os.environ['TORCH_HOME'] = '/data3/wmq/Fast-sam3d-objects/checkpoints/torch-cache'
+os.environ['TORCH_HOME'] = 'checkpoints/torch-cache'
 
 def save_visual_ply(gs_model, path):
     from plyfile import PlyData, PlyElement
@@ -76,7 +71,7 @@ def main():
     
     args, unknown = parser.parse_known_args()
 
-    # --- 处理加速开关逻辑 ---
+
     def get_enable_params(args):
         args_dict = vars(args) 
         enable_params = {k: v for k, v in args_dict.items() if k.startswith("enable_")}
@@ -87,25 +82,22 @@ def main():
         return enable_params
 
     enable_params = get_enable_params(args)
-    print(f"✅ 加速状态: SS:{enable_params['enable_ss_cache']}, SLaT:{enable_params['enable_slat_carving']}, Mesh:{enable_params['enable_mesh_aggregation']}")
+    print(f"✅: SS:{enable_params['enable_ss_cache']}, SLaT:{enable_params['enable_slat_carving']}, Mesh:{enable_params['enable_mesh_aggregation']}")
 
-    # --- 配置加载与修改 ---
-    config_path = f"../checkpoints/{args.tag}/pipeline.yaml"
+    config_path = f"checkpoints/{args.tag}/pipeline.yaml"
+
+
     config = OmegaConf.load(config_path) 
     config.workspace_dir = os.path.dirname(config_path)
     
-    # 根据开关动态修改 Config
     if enable_params['enable_ss_cache']:
         config['ss_generator_config_path'] = "ss_generator_faster.yaml" 
     if enable_params['enable_slat_carving']:
         config['slat_generator_config_path'] = "slat_generator_faster.yaml" 
 
-    # --- 初始化模型 ---
     inference = Inference(config, compile=False, args=args)
 
-    # --- 加载数据 ---
-    # 场景推理需要加载该文件夹下所有的 Mask 和 HFER
-    image_name = os.path.basename(args.image_dir) # 获取文件夹名作为场景名
+    image_name = os.path.basename(args.image_dir)
     image_path = os.path.join(args.image_dir,"image.png")
     print(f"📂 Loading data from: {args.image_dir}")
     image = load_image(image_path)
@@ -114,12 +106,10 @@ def main():
 
     print(f"🚀 Begin Inference, total {len(masks)} views...")
 
-    # --- 循环推理 ---
     outputs = []
     s_time = time.time()
     
     for i in range(len(masks)):
-        # 1. 注入当前对象的 HFER
         if hasattr(inference, 'get_hfer'):
             inference.get_hfer(hfers[i])
         if hasattr(inference, 'get_params'):
@@ -127,7 +117,6 @@ def main():
             
         print(f"  -> Processing object {i+1}/{len(masks)}...")
         
-        # 3. 执行单物体推理
         output = inference(
             image, 
             masks[i], 
@@ -138,23 +127,19 @@ def main():
     e_time = time.time()
     print(f"⏱️ Total Inference Time: {e_time - s_time:.2f}s")
 
-    # --- 场景合成 ---
     print("🧩 Compositing scene...")
     scene_gs = make_scene(*outputs)
     scene_gs = ready_gaussian_for_video_rendering(scene_gs)
 
-    # --- 保存结果 ---
     os.makedirs(args.output_dir, exist_ok=True)
     
-    # 1. 保存 PLY
     ply_path = os.path.join(args.output_dir, f"{image_name}_scene.ply")
     save_visual_ply(scene_gs, ply_path)
 
-    # 2. 渲染视频 (GIF & MP4)
     print("🎥 Rendering video...")
     video_frames = render_video(
         scene_gs,
-        r=2.5, # 视距，根据场景大小可能需要调整
+        r=2.5, 
         fov=60,
         resolution=1024,
     )["color"]
@@ -170,20 +155,7 @@ def main():
     )
     print(f"GIF saved to: {gif_path}")
 
-    # Save MP4
-    mp4_path = os.path.join(args.output_dir, f"{image_name}.mp4")
-    try:
-        imageio.mimsave(
-            mp4_path,
-            video_frames,
-            fps=30,
-            quality=8,       
-            macro_block_size=None,
-            pixelformat='yuv420p' # 兼容性更好
-        )
-        print(f"MP4 saved to: {mp4_path}")
-    except Exception as e:
-        print(f"⚠️ Error saving MP4: {e}")
+   
 
 if __name__ == "__main__":
     main()
