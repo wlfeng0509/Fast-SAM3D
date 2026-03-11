@@ -11,8 +11,8 @@ class Dino(torch.nn.Module):
     def __init__(
         self,
         input_size: int = 224,
-        repo_or_dir: str = "/data3/wmq/Fast-sam3d-objects/checkpoints/torch-cache/hub/facebookresearch_dinov2_main",
-        # repo_or_dir: str = "facebookresearch/dinov2",
+        # repo_or_dir: str = "/data/wmq/Fast-SAM3D/checkpoints/torch-cache/hub/facebookresearch_dinov2_main", # ⭐ Load locally
+        repo_or_dir: str = "facebookresearch/dinov2", 
         dino_model: str = "dinov2_vitb14",
         source: str = "local",
         backbone_kwargs: Optional[Dict[str, Any]] = None,

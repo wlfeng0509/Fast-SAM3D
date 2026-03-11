@@ -412,6 +412,12 @@ def prune_sparse_structure(
 
 def calculate_adaptive_factor(hfer_2d, hfer_3d, high_thresh = 0.7,low_thresh = 0.5):
 
+    if hfer_2d == 0 or hfer_3d == 0:
+        print("⚠️ Warning: hfer_2d = 0 or hfer_3d = 0 !! Please check!")
+        factor = 1
+        combined_score = 1
+        return factor, combined_score
+
     w_2d = 0.9
     w_3d = 0.1
     combined_score = (hfer_2d * w_2d) + (hfer_3d * w_3d)

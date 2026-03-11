@@ -126,8 +126,6 @@ def calculate_slope_robust(image_path):
     return abs(slope)
 
 
-
-
 def normalize_to_uint8(img_data):
     min_val = np.min(img_data)
     max_val = np.max(img_data)

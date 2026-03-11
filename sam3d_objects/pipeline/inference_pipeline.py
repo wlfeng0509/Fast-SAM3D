@@ -663,7 +663,6 @@ class InferencePipeline:
         return None, args, kwargs
 
 
-
     def get_condition_input(self, condition_embedder, input_dict, input_mapping):
         condition_args = self.map_input_keys(input_dict, input_mapping)
         condition_kwargs = {

@@ -1,27 +1,26 @@
-
 <h1 align="center">🚀 Fast-SAM3D: 3Dfy Anything in Images but Faster</h1>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/xxxx.xxxxx">
+  <a href="https://arxiv.org/abs/2602.05293">
     <img src="https://img.shields.io/badge/arXiv-Paper-red?style=flat-square" alt="Paper"/>
   </a>
-  <a href="https://github.com/wlfeng0509/Fast-SAM3D-3Dfy-Anything-in-Images-but-Faster">
+  <a href="https://github.com/wlfeng0509/Fast-SAM3D">
     <img src="https://img.shields.io/badge/GitHub-Code-blue?style=flat-square&logo=github" alt="Code"/>
-  </a>
-  <a href="https://huggingface.co/your-model">
-    <img src="https://img.shields.io/badge/HuggingFace-Model-yellow?style=flat-square" alt="Model"/>
   </a>
 </p>
 
 
+
+
 <div align="center">
-Weilun Feng <sup>*</sup> ,Mingqiang Wu<sup>*</sup>, Zhiliang Chen, Chuanguang Yang<sup>✉</sup>, Haotong Qin, Yuqi Li, Xiaokun Liu, Guoxin Fan, Zhulin An<sup>✉</sup>, Libo Huang, Yulun Zhang, Michele Magno, Yongjun Xu
+Weilun Feng <sup>*</sup> ,Mingqiang Wu<sup>*</sup>, Zhiliang Chen, Chuanguang Yang<sup>✉</sup>, Haotong Qin, Yuqi Li, Xiaokun Liu, Guoxin Fan, Zhulin An<sup>✉</sup>, Libo Huang, Yulun Zhang, Michele Magno, Yongjun Xu
+
 
 </div>
 
 <sup>*</sup>Equal Contribution  <sup>✉</sup>Corresponding Author
 
-,Institute of Computing Technology, Chinese Academy of Sciences,
+Institute of Computing Technology, Chinese Academy of Sciences,
 University of Chinese Academy of Sciences,
 China University of Mining and Technology,
 ETH Zürich,
@@ -37,6 +36,7 @@ Shanghai Jiao Tong University
 <p align="center">
   <strong>Fast-SAM3D accelerates SAM3D by up to 2.67× while maintaining geometric fidelity and semantic consistency.</strong>
 </p>
+
 
 
 ---
@@ -62,7 +62,8 @@ Shanghai Jiao Tong University
 
 ## 📰 News
 
-- **[2026.02.05]** 🎉 Paper and code released! Check out our [paper](https://arxiv.org/abs/xxxx.xxxxx).
+- **[2026.03.11]**  Code optimized and some known bugs fixed
+- **[2026.02.05]** 🎉 Paper and code released! Check out our [paper](https://arxiv.org/abs/2602.05293).
 
 ---
 
@@ -90,21 +91,25 @@ Shanghai Jiao Tong University
   <strong>Overview of Fast-SAM3D.</strong> Our approach integrates three heterogeneity-aware modules: (1) Modality-Aware Step Caching for decoupling structural evolution from layout updates; (2) Joint Spatiotemporal Token Carving for eliminating redundancy; (3) Spectral-Aware Token Aggregation for adaptive decoding resolution.
 </p>
 
+
 ### Stage 1: Modality-Aware Step Caching
 
 The Sparse Structure Generator exhibits **modality heterogeneity**: shape tokens evolve smoothly while layout tokens are volatile. We propose:
+
 - **Linear Extrapolation** for shape tokens using finite-difference prediction
 - **Momentum-Anchored Smoothing** for layout tokens to suppress high-frequency jitter
 
 ### Stage 2: Joint Spatiotemporal Token Carving
 
 The SLaT Generator shows **intrinsic refinement sparsity**: updates concentrate on high-entropy regions. We design:
+
 - **Unified Saliency Potential** combining temporal dynamics (magnitude & abruptness) and spatial frequency
 - **Dynamic Adaptive Step Caching** with curvature-aware trajectory approximation
 
 ### Stage 3: Spectral-Aware Token Aggregation
 
 The Mesh Decoder processes dense token sequences. We introduce:
+
 - **Spectral Complexity Analysis** using High-Frequency Energy Ratio (HFER)
 - **Instance-Adaptive Aggregation** with aggressive compression for simple shapes and detail preservation for complex geometries
 
@@ -121,7 +126,7 @@ The Mesh Decoder processes dense token sequences. We introduce:
 
 ### Setup FastSAM3D Environment
 
-If you already have the official SAM3D environment, you can directly reuse it,below is the official environment configuration for SAM3D.
+If you already have the official SAM3D environment, you can directly reuse it,below is the official environment configuration for Fast-SAM3D.
 
 ```
 # create fastsam3d environment
@@ -160,7 +165,6 @@ Sanctioned jurisdiction will result in requests being **rejected**.
 
 ```bash
 pip install 'huggingface-hub[cli]<1.0'
-
 TAG=hf
 hf download \
   --repo-type model \
@@ -171,38 +175,30 @@ mv checkpoints/${TAG}-download/checkpoints checkpoints/${TAG}
 rm -rf checkpoints/${TAG}-download
 ```
 
+**Moge**
 
+Moge model download link: https://huggingface.co/Ruicheng/moge-2-vitl-normal/tree/main
+
+Modify the weight path of `depth_model` in `pipeline.yaml`.
 
 ---
 
 ## 🚀 Usage
 
-### Quick Start/Object Generation
+### Quick Start
 
 ```bash
-# Generate 3D from single image + mask
-cd notebook
-python infer.py \
-    --image_path examples/input.jpg \
-    --mask_index 1 \
-    --output_dir outputs/ \
-    --enable_acceleration
+cd Fast-SAM3D
+# Object Generation
+bash infer.sh
+# Scene Generation
+bash infer_scene.sh
 ```
 
 ### Acceleration Options
 
 ```bash
-# Full Fast-SAM3D acceleration (default)
-cd notebook
-python infer.py \
-    --image_path examples/image.png \
-    --mask_index 1\
-    --enable_ss_cache \
-    --enable_slat_carving \
-    --enable_mesh_aggregation
-
 # Customize acceleration strength
-cd notebook
 python infer.py \
     --image_path examples/image.png \
     --mask_index 1 \
@@ -223,20 +219,31 @@ python infer.py \
 
 ```bash
 cd notebook
-python infer_scene.py \
-    --image_dir examples \
-    --output_dir outputs/ \
+python infer.py \
+    --image_path image.png \
+    --mask_index 14 \
+    --output_dir /data/wmq/Fast-SAM3D/Look \
+    --ss_cache_stride 3 \
+    --ss_warmup 2 \
+    --ss_order 1 \
+    --ss_momentum_beta 0.5 \
+    --slat_thresh 1.5 \
+    --slat_warmup 3 \
+    --slat_carving_ratio 0.1 \
+    --mesh_spectral_threshold_low 0.5 \
+    --mesh_spectral_threshold_high 0.7 \
     --enable_acceleration
-
 ```
 
 ### Image Directory
 
+At least one RGB image and a mask are required
+
 ```
 ├── example/
-│   ├── image.png
-│   ├── 0.png  #RGB_mask
-│   └── 1.png
+│   ├── image.png	#RGB_image
+│   ├── 0.png  		#RGB_mask_1
+│   └── 1.png		#RGB_mask_2
 ```
 
 ---
@@ -247,21 +254,22 @@ python infer_scene.py \
 
 ### Quantitative Comparison
 
-| Method | Visual ↑ | CD ↓ | F1@0.05 ↑ | vIoU ↑ | 3D-IoU ↑ | Scene Time ↓ | Speed ↑ |
-|:-------|:--------:|:----:|:---------:|:------:|:--------:|:------------:|:-------:|
-| SAM3D | 0.369 | 0.022 | 92.34 | 0.543 | 0.403 | 462.3s | 1.00× |
-| Random Drop | 0.264 | 0.030 | 83.52 | 0.327 | 0.094 | 402.2s | 1.15× |
-| Uniform Merge | 0.329 | 0.023 | 91.48 | 0.540 | 0.367 | 366.8s | 1.26× |
-| Fast3Dcache | 0.348 | 0.022 | 91.31 | 0.505 | 0.051 | 443.3s | 1.04× |
-| TaylorSeer | 0.344 | 0.028 | 90.95 | 0.504 | 0.374 | 265.6s | 1.74× |
-| EasyCache | 0.342 | 0.028 | 87.06 | 0.432 | 0.186 | 244.9s | 1.89× |
-| **Fast-SAM3D** | **0.350** | **0.022** | **92.59** | **0.552** | **0.375** | **229.7s** | **2.01×** |
+| Method         | Visual ↑  |   CD ↓    | F1@0.05 ↑ |  vIoU ↑   | 3D-IoU ↑  | Scene Time ↓ |  Speed ↑  |
+| :------------- | :-------: | :-------: | :-------: | :-------: | :-------: | :----------: | :-------: |
+| SAM3D          |   0.369   |   0.022   |   92.34   |   0.543   |   0.403   |    462.3s    |   1.00×   |
+| Random Drop    |   0.264   |   0.030   |   83.52   |   0.327   |   0.094   |    402.2s    |   1.15×   |
+| Uniform Merge  |   0.329   |   0.023   |   91.48   |   0.540   |   0.367   |    366.8s    |   1.26×   |
+| Fast3Dcache    |   0.348   |   0.022   |   91.31   |   0.505   |   0.051   |    443.3s    |   1.04×   |
+| TaylorSeer     |   0.344   |   0.028   |   90.95   |   0.504   |   0.374   |    265.6s    |   1.74×   |
+| EasyCache      |   0.342   |   0.028   |   87.06   |   0.432   |   0.186   |    244.9s    |   1.89×   |
+| **Fast-SAM3D** | **0.350** | **0.022** | **92.59** | **0.552** | **0.375** |  **229.7s**  | **2.01×** |
 
 ### Speedup Analysis
 
 <p align="center">
   <img src="assets/speedup.png" width="80%" alt="Speedup Analysis"/>
 </p>
+
 
 ### Qualitative Comparison
 
@@ -271,6 +279,7 @@ python infer_scene.py \
 <p align="center">
   Fast-SAM3D produces results perceptually indistinguishable from SAM3D while generic strategies suffer from structural collapse (Random Drop) or semantic drift (TaylorSeer).
 </p>
+
 </p>
 
 ---
@@ -280,11 +289,14 @@ python infer_scene.py \
 If you find this work helpful, please consider citing:
 
 ```bibtex
-@article{feng2026fastsam3d,
-  title={Fast-SAM3D: 3Dfy Anything in Images but Faster},
-  author={Feng, Weilun and Wu, Mingqiang and Chen, Zhiliang and Yang, Chuanguang and Qin, Haotong and Li, Yuqi and Liu, Xiaokun and Fan, Guoxin and An, Zhulin and Huang, Libo and Zhang, Yulun and Magno, Michele and Xu, Yongjun},
-  journal={arXiv preprint arXiv:xxxx.xxxxx},
-  year={2026}
+@misc{feng2026fastsam3d3dfyimagesfaster,
+      title={Fast-SAM3D: 3Dfy Anything in Images but Faster}, 
+      author={Weilun Feng and Mingqiang Wu and Zhiliang Chen and Chuanguang Yang and Haotong Qin and Yuqi Li and Xiaokun Liu and Guoxin Fan and Zhulin An and Libo Huang and Yulun Zhang and Michele Magno and Yongjun Xu},
+      year={2026},
+      eprint={2602.05293},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2602.05293}, 
 }
 ```
 
@@ -305,6 +317,7 @@ This project is released under the [MIT License](LICENSE).
 ## 📧 Contact
 
 For questions or suggestions, please open an issue or contact:
+
 - Weilun Feng: [fengweilun24s@ict.ac.cn](fengweilun24s@ict.ac.cn)
 
 - Mingqiang Wu wumingqiang25e@ict.ac.cn

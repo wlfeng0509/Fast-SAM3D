@@ -92,6 +92,7 @@ class Inference:
         config.rendering_engine = "pytorch3d"  # overwrite to disable nvdiffrast
         config.compile_model = compile 
         check_hydra_safety(config, WHITELIST_FILTERS, BLACKLIST_FILTERS)
+        self.hfer_2d = 0
         self._pipeline: InferencePipelinePointMap = instantiate(config) 
 
     
@@ -112,7 +113,7 @@ class Inference:
         self._pipeline.mesh_params = mesh_params
         self._pipeline.enable_mesh = enable_mesh
 
-        print("✅✅✅✅", self._pipeline.ss_params )
+        print("✅", self._pipeline.ss_params )
      
 
     def merge_mask_to_rgba(self, image, mask):

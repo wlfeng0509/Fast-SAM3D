@@ -9,7 +9,7 @@ import time
 from omegaconf import OmegaConf, DictConfig, ListConfig
 
 sys.path.append("notebook")
-os.environ['TORCH_HOME'] = '/data3/wmq/Fast-sam3d-objects/checkpoints/torch-cache'
+os.environ['TORCH_HOME'] = 'checkpoints/torch-cache'
 
 def clear_directory(directory_path):
     try:
