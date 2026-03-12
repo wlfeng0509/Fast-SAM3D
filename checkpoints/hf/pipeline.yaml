@@ -62,7 +62,7 @@ depth_model:
   _target_: sam3d_objects.pipeline.depth_models.moge.MoGe
   model:
     _target_: moge.model.v1.MoGeModel.from_pretrained
-    pretrained_model_name_or_path: /data3/wmq/Fast-sam3d-objects/checkpoints/moge-vitl/model.pt # ⭐本地加载
+    pretrained_model_name_or_path: /data/wmq/Fast-SAM3D/checkpoints/moge-vitl/model.pt # ⭐本地加载
 slat_condition_input_mapping: []
 slat_preprocessor:
   _target_: sam3d_objects.data.dataset.tdfy.preprocessor.PreProcessor

@@ -85,4 +85,4 @@ webdataset==0.2.86
 Werkzeug==3.0.6
 xatlas==0.0.9
 xformers==0.0.28.post3
-# MoGe @ git+https://github.com/microsoft/MoGe.git@a8c37341bc0325ca99b9d57981cc3bb2bd3e255b
+MoGe @ git+https://github.com/microsoft/MoGe.git@a8c37341bc0325ca99b9d57981cc3bb2bd3e255b
