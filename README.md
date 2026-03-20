@@ -202,7 +202,7 @@ bash infer_scene.sh
 python infer.py \
     --image_path examples/image.png \
     --mask_index 1 \
-    --output_dir /data3/wmq/Fast-sam3d-objects/Look \
+    --output_dir /data/wmq/Fast-SAM3D/Look \
     --ss_cache_stride 3 \
     --ss_warmup 2 \
     --ss_order 1 \
@@ -218,11 +218,9 @@ python infer.py \
 ### Scene Generation
 
 ```bash
-cd notebook
-python infer.py \
-    --image_path image.png \
-    --mask_index 14 \
-    --output_dir /data/wmq/Fast-SAM3D/Look \
+python infer_scene.py\
+    --image_dir  examples_dir \
+    --output_dir /data/wmq/Fast-SAM3D/Look-scene \
     --ss_cache_stride 3 \
     --ss_warmup 2 \
     --ss_order 1 \
