@@ -73,12 +73,17 @@ def main():
 
 
     def get_enable_params(args):
-        args_dict = vars(args) 
+        args_dict = vars(args)
         enable_params = {k: v for k, v in args_dict.items() if k.startswith("enable_")}
+        
         if enable_params.get('enable_acceleration', False):
             enable_params['enable_ss_cache'] = True
             enable_params['enable_slat_carving'] = True
             enable_params['enable_mesh_aggregation'] = True
+        
+        for k, v in enable_params.items():
+            setattr(args, k, v)
+        
         return enable_params
 
     enable_params = get_enable_params(args)

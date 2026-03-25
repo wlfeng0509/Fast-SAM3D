@@ -113,7 +113,10 @@ class Inference:
         self._pipeline.mesh_params = mesh_params
         self._pipeline.enable_mesh = enable_mesh
 
-        print("✅", self._pipeline.ss_params )
+        print("✅ SS_params ", self._pipeline.ss_params )
+        print("✅ Slat_params", self._pipeline.slat_params )
+        print("✅ Mesh_params ", self._pipeline.mesh_params )
+        print("✅ Enable_mesh", self._pipeline.enable_mesh )
      
 
     def merge_mask_to_rgba(self, image, mask):
