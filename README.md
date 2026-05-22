@@ -61,6 +61,7 @@ Shanghai Jiao Tong University
 ---
 
 ## 📰 News
+- **[2026.05.22]**  A Gradio-based user demo is now available
 - **[2026.05.01]** 🎉 Accepted by ICML 2026.
 - **[2026.03.25]**  Fixed the bug where mesh merging was not enabled properly.
 - **[2026.03.11]**  Code optimized and some known bugs fixed
@@ -247,7 +248,19 @@ At least one RGB image and a mask are required
 
 ---
 
+## 🍔 User demo
 
+A user demo system, implemented with **Gradio**, is now live and available on GitHub. You can quickly launch it locally by running:
+
+```
+ python gradio_demo.py
+```
+
+<p align="center">
+  <img src="assets/demo.png" width="95%" alt="Fast-SAM3D Pipeline"/>
+</p>
+<p align="center">
+</p>
 
 ## 📊 Results
 

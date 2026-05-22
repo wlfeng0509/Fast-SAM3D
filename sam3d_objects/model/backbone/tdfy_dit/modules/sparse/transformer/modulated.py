@@ -7,7 +7,7 @@ from ..attention import SparseMultiHeadAttention, SerializeMode
 from ...norm import LayerNorm32
 from .blocks import SparseFeedForwardNet
 
-from step_utils_ss import derivative_approximation, step_formula, step_cache_init
+from taylor_utils_ss import derivative_approximation, taylor_cache_init, taylor_formula
 
 
 class ModulatedSparseTransformerBlock(nn.Module):
@@ -158,7 +158,7 @@ class ModulatedSparseTransformerCrossBlock(nn.Module):
     ) -> SparseTensor:
         
         # Block输入 torch.Size([1, 1024]) torch.Size([5248, 1024]) torch.Size([5248, 4]) torch.Size([1, 1024]) torch.Size([1, 5496, 1024])
-        # print("Block输入",x.shape,x.feats.shape,x.coords.shape,mod.shape,context.shape)
+        # print("Block input", x.shape, x.feats.shape, x.coords.shape, mod.shape, context.shape)
 
         if self.share_mod:
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = mod.chunk(
@@ -213,7 +213,7 @@ class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBloc
     def _forward(
         self, x: SparseTensor, mod: torch.Tensor, context: torch.Tensor,current, cache_dic
     ) -> SparseTensor:
-        # print("👌sparse")
+        # print("sparse")
 
         # FLOPs 初始化
         B, N, C = x.shape  # 获取输入 x 的 shape
@@ -269,7 +269,7 @@ class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBloc
             x = x + h
 
         # ❤️
-        elif current['type'] == 'Taylor':
+        elif current['type'] == 'taylor':
             # AdaLN FLOPs (SiLU and Linear)
             if test_FLOPs:
                 flops += B * C  # SiLU FLOPs
@@ -298,4 +298,3 @@ class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBloc
             )
         else:
             return self._forward(x, mod, context)
-

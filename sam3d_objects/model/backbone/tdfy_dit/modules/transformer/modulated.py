@@ -199,7 +199,7 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
         super().__init__()
         self.use_checkpoint = use_checkpoint
         self.share_mod = share_mod
-        # print("👌👌MOTlatent_names",latent_names)
+        # print("MOTlatent_names", latent_names)
         self.norm1 = torch.nn.ModuleDict(
             {
                 latent_name: LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
@@ -349,7 +349,7 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
     #     )
     #     return x
 
-    def _forward_f3c_fast(self, x: Dict, mod: torch.Tensor, context: torch.Tensor):
+    def _forward_token_fast(self, x: Dict, mod: torch.Tensor, context: torch.Tensor):
             # 定义计时器
             t_prep = CudaTimer("1. Prep")
             t_msa  = CudaTimer("2. MSA Block")
@@ -505,13 +505,13 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
 
 
     def forward(self, x: Dict, mod: torch.Tensor, context: torch.Tensor):
-            # 🔍 智能切换：如果是 F3C 模式（key 很少），走极速通道
+            # Token pruning mode can pass a small key subset, so use the fast path.
             # 这里的判断条件 loose 一点，只要是字典且小于3个key就走 fast path
             if not self.use_checkpoint and isinstance(x, dict) and len(x) <= 2:
                 # 确保只有 shape 或 rot 才能进 fast path，防止其他 key 报错
                 valid_keys = {'shape', '6drotation_normalized'}
                 if all(k in valid_keys for k in x.keys()):
-                    return self._forward_f3c_fast(x, mod, context)
+                    return self._forward_token_fast(x, mod, context)
 
             # 兜底：走修复后的通用通道
             if self.use_checkpoint:

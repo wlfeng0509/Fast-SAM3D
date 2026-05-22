@@ -96,7 +96,6 @@ class InferencePipelinePointMap(InferencePipeline):
         self.depth_model = depth_model
         self.layout_post_optimization_method = layout_post_optimization_method
         self.clip_pointmap_beyond_scale = clip_pointmap_beyond_scale
-        self.hfer_2d = 0
         super().__init__(*args, **kwargs)
 
 
@@ -402,7 +401,6 @@ class InferencePipelinePointMap(InferencePipeline):
                 use_distillation=use_stage2_distillation,
             )
             
-
             outputs = self.decode_slat(
                 map_tokens, slat, self.decode_formats if decode_formats is None else decode_formats,
             )

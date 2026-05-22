@@ -663,6 +663,7 @@ class InferencePipeline:
         return None, args, kwargs
 
 
+
     def get_condition_input(self, condition_embedder, input_dict, input_mapping):
         condition_args = self.map_input_keys(input_dict, input_mapping)
         condition_kwargs = {
@@ -765,8 +766,8 @@ class InferencePipeline:
         
                 coords_raw = torch.argwhere(ss > 0)[:, [0, 2, 3, 4]].int()
                 coords_value = get_coords_value(ss) 
-                coords_scores ,hfer_3d = process_and_visualize(coords_value, output_dir="./可视化", filter_radius=8 , draw_spatial = False, draw_freq = False)
-                print(coords_scores.shape,hfer_3d)
+                coords_scores ,hfer_3d = process_and_visualize(coords_value, output_dir="./visualization", filter_radius=8 , draw_spatial = True, draw_freq = False)
+                # print(coords_scores.shape,hfer_3d)
 
                 # downsample output
                 return_dict["coords_original"] = coords_raw
@@ -779,6 +780,8 @@ class InferencePipeline:
                 #     )
 
                 sample_type = "raw"
+                # print(self.enable_mesh)
+                # import pdb;pdb.set_trace()
                 if self.enable_mesh:
                     sample_type = "double"
                     print("Enable_mesh_aggregation!")
@@ -870,9 +873,11 @@ class InferencePipeline:
                 slat = slat_generator(
                     latent_shape, DEVICE, *condition_args, **condition_kwargs
                 )
+
                 end_time= time.time()
                 diff_time = end_time-start_time
                 logger.info(f"slat generator finish !: {diff_time:.2f}")
+                
                 slat = sp.SparseTensor(
                     coords=coords,
                     feats=slat[0],

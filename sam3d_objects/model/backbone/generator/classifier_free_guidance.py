@@ -269,7 +269,7 @@ class ClassifierFreeGuidanceWithExternalUnconditionalProbability(ClassifierFreeG
             
 
 
-class ClassifierFreeGuidance_f3c(ClassifierFreeGuidance):
+class ClassifierFreeGuidance_token(ClassifierFreeGuidance):
     UNCONDITIONAL_HANDLING_TYPES = {
         "zeros": zero_out,
         "discard": discard,
@@ -357,7 +357,7 @@ class ClassifierFreeGuidance_f3c(ClassifierFreeGuidance):
                 )
 
 
-class ClassifierFreeGuidanceWithExternalUnconditionalProbability_f3c(ClassifierFreeGuidanceWithExternalUnconditionalProbability):
+class ClassifierFreeGuidanceWithExternalUnconditionalProbability_token(ClassifierFreeGuidanceWithExternalUnconditionalProbability):
 
     def __init__(self, *args, use_unconditional_from_flow_matching=False, **kwargs):
         super().__init__(*args, **kwargs)

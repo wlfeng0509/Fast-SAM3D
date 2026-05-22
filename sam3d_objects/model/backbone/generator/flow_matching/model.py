@@ -12,7 +12,9 @@ from sam3d_objects.data.utils import tree_tensor_map, tree_reduce_unique
 from sam3d_objects.model.backbone.generator.flow_matching.solver import (
     ODESolver,
     Euler,
-    Euler_end_slat,
+    Euler_faster_slat,
+    Euler_easy_ss,
+    Euler_easy_slat,
     Midpoint,
     RungeKutta4,
     gradient,
@@ -39,7 +41,9 @@ def rev_lognorm_sampler(mean=0.0, std=1.0, **kwargs):
 class FlowMatching(Base):
     SOLVER_METHODS = {
         "euler": Euler,
-        "euler_end_slat":Euler_end_slat,
+        "euler_faster_slat": Euler_faster_slat,
+        "euler_easy_slat":Euler_easy_slat,
+        "euler_easy_ss":Euler_easy_ss,
         "midpoint": Midpoint,
         "rk4": RungeKutta4,
         "sde": SDE,
@@ -372,9 +376,9 @@ class ConditionalFlowMatching(FlowMatching):
             yield t, x_t, ()
 
 
-from f3c_slat_end.f3c_leader import f3cLeader
-from f3c_slat_end.f3c_argparser import  parse_f3c_args
-from f3c_slat_end.selection import AdvancedStabilityTracker
+from token_slat.token_leader import TokenLeader
+from token_slat.token_argparser import parse_token_args
+from token_slat.selection import AdvancedStabilityTracker
 from easydict import EasyDict as edict
 class FlowMatching_faster(FlowMatching):
 
@@ -383,7 +387,7 @@ class FlowMatching_faster(FlowMatching):
         reverse_fn, 
         thresh = 1.0, 
         ret_steps=2, 
-        solver_method='euler_end_slat', 
+        solver_method='euler_faster_slat',
         solver_kwargs=None,
         **kwargs
     ):
@@ -391,9 +395,9 @@ class FlowMatching_faster(FlowMatching):
         if solver_kwargs is None:
             solver_kwargs = {}
 
-        self.LEADER = f3cLeader()
+        self.LEADER = TokenLeader()
         self.stability_tracker = AdvancedStabilityTracker()
-        self.args = parse_f3c_args()
+        self.args = parse_token_args()
         self.coords_scores = None
         self.map_tokens = None
 
@@ -406,7 +410,7 @@ class FlowMatching_faster(FlowMatching):
             **kwargs
         )
 
-    def _init_f3c_state(self, x_t_shape , device, args, model):
+    def _init_token_state(self, x_t_shape, device, args, model):
         self.LEADER.set_parameters(args)
         if hasattr(model, 'dtype'):
              self.model_dtype = model.dtype
@@ -431,10 +435,9 @@ class FlowMatching_faster(FlowMatching):
         t_seq = self._prepare_t().to(x_device)
         self._solver.thresh = self.slat_params['slat_thresh']
         self._solver.ret_steps = self.slat_params['slat_warmup']
-        self._solver.carving_ratio = self.slat_params['slat_carving_ratio']
+        self._solver.carving_ratio = self.slat_params['slat_token_ratio']
 
  
-   
         for x_t, t, v in self._solver.solve_iter(
             self._generate_dynamics, 
             x_0,
@@ -463,9 +466,8 @@ class FlowMatching_faster(FlowMatching):
     def generate(self, x_shape, x_device, *args_conditionals, **kwargs_conditionals):
         B,N,C = x_shape
         model = self.reverse_fn
-        self._init_f3c_state((B,N,C), x_device , self.args, model)
+        self._init_token_state((B, N, C), x_device, self.args, model)
        
-
         for _, xt, _ in self.generate_iter(
             x_shape,
             x_device,
@@ -475,3 +477,162 @@ class FlowMatching_faster(FlowMatching):
            
             pass
         return xt
+
+
+
+# ——————————————————————————————————————————————————————————————————
+# ⭐ Easy 版本的
+class FlowMatching_easy(FlowMatching):
+    """
+    继承自 FlowMatching，集成了 Easy 求解器。
+    如果你的基类是 ConditionalFlowMatching，请将括号内的父类改为 ConditionalFlowMatching。
+    """
+
+    def __init__(
+        self, 
+        reverse_fn, 
+        thresh = 1.0, 
+        ret_steps=2, 
+        solver_method='euler_easy_slat',
+        solver_kwargs=None,
+        **kwargs
+    ):
+        # 自动初始化 solver_kwargs
+        if solver_kwargs is None:
+            solver_kwargs = {}
+        
+        # 将 Easy 的核心参数注入 solver_kwargs
+        # 使用 setdefault 允许用户在 solver_kwargs 中覆盖这些值
+        # solver_kwargs.setdefault("thresh", 1.0)
+        # solver_kwargs.setdefault("ret_steps", 2)
+        # 1.0:20-step，2.0：21-step, 3.0:22-step
+        solver_kwargs.setdefault("thresh", 2.5)
+        solver_kwargs.setdefault("ret_steps", 2)
+            
+        # 调用父类初始化
+        super().__init__(
+            reverse_fn=reverse_fn,
+            solver_method=solver_method,
+            solver_kwargs=solver_kwargs,
+            **kwargs
+        )
+
+    def generate_iter(
+        self,
+        x_shape,
+        x_device,
+        *args_conditionals,
+        **kwargs_conditionals,
+    ):
+        x_0 = self._generate_noise(x_shape, x_device)
+        t_seq = self._prepare_t().to(x_device)
+ 
+        # 步数迭代
+        for x_t, t, v in self._solver.solve_iter(
+            self._generate_dynamics, # 模型函数
+            x_0,
+            t_seq,
+            *args_conditionals,
+            **kwargs_conditionals,
+        ):
+            yield t, x_t, () # 结果
+     
+        # import pdb; pdb.set_trace()
+
+    # ⭐
+    def _generate_dynamics(
+        self,
+        x_t,
+        t,
+        *args_conditionals,
+        **kwargs_conditionals,
+    ):
+        # 骨干网络的前向传播,主体就是每个体素的latent，维度为8
+        # print("x_t.shape,t", x_t.shape, t, args_conditionals[0].shape, args_conditionals[1].shape)
+        # print("x_t.shape,t", x_t.shape, t, args_conditionals[0].shape, args_conditionals[1].shape)
+
+        # import pdb; pdb.set_trace()
+        # 去噪网络
+        return self.reverse_fn(x_t, t * self.time_scale, *args_conditionals, **kwargs_conditionals)
+
+
+
+# ——————————————————————————————————————————————————————————————————
+# ⭐ Taylor 版本的
+from taylor_utils_slat import (
+    derivative_approximation,
+    taylor_cal_type,
+    taylor_cache_init,
+    taylor_formula,
+    taylor_init,
+)
+class FlowMatching_taylorseer(FlowMatching):
+    """
+    继承自 FlowMatching，集成了 TaylorSeer 求解器。
+    如果你的基类是 ConditionalFlowMatching，请将括号内的父类改为 ConditionalFlowMatching。
+    """
+
+    def __init__(
+        self, 
+        reverse_fn, 
+        solver_method='euler', 
+        solver_kwargs=None,
+        **kwargs
+    ):
+            
+        # 调用父类初始化
+        super().__init__(
+            reverse_fn=reverse_fn,
+            solver_method=solver_method,
+            **kwargs
+        )
+        self.taylor_dic, self.current = taylor_init(self.inference_steps)
+
+    def generate_iter(
+        self,
+        x_shape,
+        x_device,
+        *args_conditionals,
+        **kwargs_conditionals,
+    ):
+        x_0 = self._generate_noise(x_shape, x_device)
+        t_seq = self._prepare_t().to(x_device)
+        self.taylor_dic, self.current = taylor_init(self.inference_steps)
+        
+        # 步数迭代
+        for x_t, t, v in self._solver.solve_iter(
+            self._generate_dynamics, # 模型函数
+            x_0,
+            t_seq,
+            *args_conditionals,
+            **kwargs_conditionals,
+        ):
+            yield t, x_t, () # 结果
+     
+    
+    def _generate_dynamics(
+        self,
+        x_t,
+        t,
+        *args_conditionals,
+        **kwargs_conditionals,
+    ):
+        taylor_cal_type(self.taylor_dic, self.current)
+        self.current['stream'] = 'final'
+        self.current['layer'] = 'final'
+        self.current['module'] = 'final'
+        taylor_cache_init(self.taylor_dic, self.current)
+
+        # 4.self.reverse_fn,得到预测的速度
+        if self.current['type'] == 'full':
+            v = self.reverse_fn(x_t, t * self.time_scale, *args_conditionals, **kwargs_conditionals)
+            derivative_approximation(self.taylor_dic, self.current, v)
+            print("Do not skip")
+            
+        elif self.current['type'] == 'taylor':
+            print("Skip")
+            v = taylor_formula(self.taylor_dic, self.current)
+
+        self.current['step'] += 1
+        return  v
+ 

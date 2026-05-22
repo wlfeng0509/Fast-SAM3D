@@ -223,7 +223,7 @@ class EmbedderFuser(torch.nn.Module):
                         raise NotImplementedError(
                             f"Unknown pos embedding {self.use_pos_embedding}"
                         )
-                # print( f"⭐⭐ {kwarg_name}，{cond_token.shape}" )
+                # print(f"{kwarg_name}, {cond_token.shape}")
                 tokens.append(cond_token)
                 kwarg_names.append(kwarg_name)
 

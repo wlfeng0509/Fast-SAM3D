@@ -3,7 +3,7 @@
 import math
 from contextlib import contextmanager
 
-class f3cLeader:
+class TokenLeader:
     def __init__(self):
         self.num_steps = 0                 
         self.resolution = 16              
@@ -27,7 +27,7 @@ class f3cLeader:
         self.resolution = args.resolution
         
 
-        if args.use_f3c:
+        if args.use_token:
             
             self.full_sampling_steps = 2
             self.full_sampling_end_steps = args.full_sampling_end_steps

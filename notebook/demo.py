@@ -6,7 +6,6 @@ from inference import Inference, load_image, load_single_mask
 from fft.fft2d import calculate_hfer_robust
 import os
 import time
-from omegaconf import OmegaConf, DictConfig, ListConfig
 
 sys.path.append("notebook")
 os.environ['TORCH_HOME'] = '/data3/wmq/Fast-sam3d-objects/checkpoints/torch-cache'
@@ -87,99 +86,55 @@ def main():
     #---SSG
     parser.add_argument("--ss_faster_stride", type=int, default=3)
     parser.add_argument("--ss_warmup", type=int, default=2)
-    parser.add_argument("--ss_order", type=int, default=1)
+    parser.add_argument("--ss_order", type=float, default=1)
     parser.add_argument("--ss_momentum_beta", type=float, default=0.5)
     #---SLaT
     parser.add_argument("--slat_thresh", type=float, default=0.5)
     parser.add_argument("--slat_warmup", type=int, default=2)
     parser.add_argument("--slat_token_ratio", type=float, default=0.15)
-    #--Mesh
-    parser.add_argument("--mesh_spectral_threshold_low", type=float, default=0.5)
-    parser.add_argument("--mesh_spectral_threshold_high", type=float, default=0.7)
-    #--Open
-    parser.add_argument("--enable_ss_faster", action="store_true", help="")
-    parser.add_argument("--enable_slat_token", action="store_true", help="")
-    parser.add_argument("--enable_mesh_aggregation", action="store_true", help="")
-    parser.add_argument("--enable_acceleration", action="store_true", help="")
-
-    # --more
-    parser.add_argument("--enable_taylor", action="store_true", help="")
-    parser.add_argument("--enable_easy", action="store_true", help="")
+    
     args = parser.parse_args()
-
-    
-    def get_enable_params(args):
-        args_dict = vars(args)
-        enable_params = {k: v for k, v in args_dict.items() if k.startswith("enable_")}
-        
-        if enable_params.get('enable_acceleration', False):
-            enable_params['enable_ss_faster'] = True
-            enable_params['enable_slat_token'] = True
-            enable_params['enable_mesh_aggregation'] = True
-
-        if enable_params.get('enable_taylor', False) or enable_params.get('enable_easy', False):
-            enable_params['enable_ss_faster'] = False
-            enable_params['enable_slat_token'] = False
-            enable_params['enable_mesh_aggregation'] = False
-        
-        for k, v in enable_params.items():
-            setattr(args, k, v)
-        
-        return enable_params
-
+    # 1. load model
     config_path = f"checkpoints/{args.tag}/pipeline.yaml"
-    enable_params = get_enable_params(args)
-    config = OmegaConf.load(config_path) 
-    config.workspace_dir = os.path.dirname(config_path)
+    inference = Inference(config_path, compile=False)
 
-    if enable_params['enable_ss_faster']:
-        config['ss_generator_config_path'] =  "ss_generator_faster.yaml" 
-    if enable_params['enable_slat_token']:
-        config['slat_generator_config_path'] = "slat_generator_faster.yaml" 
-
-    # This option has higher priority.
-    if enable_params['enable_taylor']:
-        config['ss_generator_config_path'] =  "ss_generator_taylorseer.yaml"
-        config['slat_generator_config_path'] = "slat_generator_taylorseer.yaml" 
-
-    if enable_params['enable_easy']:
-        config['ss_generator_config_path'] =  "ss_generator_easy.yaml"
-        config['slat_generator_config_path'] = "slat_generator_easy.yaml"
-
-    print(f"Acceleration enabled: SS:{enable_params['enable_ss_faster']}, SLaT:{enable_params['enable_slat_token']}, Mesh:{enable_params['enable_mesh_aggregation']}")
-    
-    inference = Inference(config, compile=False, args=args)
-
-
-    # load image and mask
+    # 2. load image and mask
     image = load_image(args.image_path)
-    folder_path = os.path.dirname(args.image_path)
-    mask_path = os.path.join(folder_path, f"{args.mask_index}.png")
-    mask = load_single_mask(folder_path, index=args.mask_index)
     
-    hfer = calculate_hfer_robust(mask_path)
+    # If load_single_mask needs a directory and index, split them from the path.
+    # Keep the original logic while passing values through args.
+    folder_path = os.path.dirname(args.image_path)
+    mask = load_single_mask(folder_path, index=args.index)
+    
+    # 3. Calculate HFER and set it on the model.
+    hfer = calculate_hfer_robust(args.mask_path)
+    inference.get_HFER(hfer)
 
-    if hasattr(inference, 'get_hfer'):
-        inference.get_hfer(hfer)
-    if hasattr(inference, 'get_params'):
-        inference.get_params(args)
-
-    # inferece
+    # 4. Run inference.
     print(f"Start inference: {args.image_path}")
     s_time = time.time()
+    
+    # Pass additional inference hyperparameters.
     output = inference(
         image, 
         mask, 
         seed=args.seed,
+        cache_stride=args.cache_stride,
+        momentum_beta=args.momentum_beta,
+        carving_ratio=args.carving_ratio
     )
-    print(f"Done, total time: {time.time() - s_time:.2f}s")
+    
+    print(f"Inference finished in {time.time() - s_time:.2f}s")
 
-
+    # 5. Save results.
     os.makedirs(args.output_dir, exist_ok=True)
-    ply_path = os.path.join(args.output_dir, f"splat-faster-{args.mask_index}.ply")
+    
+    ply_path = os.path.join(args.output_dir, f"splat-easy-{args.index}.ply")
     save_visual_ply(output["gs"], ply_path)
-    glb_path = os.path.join(args.output_dir, f"splat-faster-{args.mask_index}.glb")
+    
+    glb_path = os.path.join(args.output_dir, f"splat-easy-{args.index}.glb")
     output["glb"].export(glb_path)
+    
     print(f"Files saved to:\n - {ply_path}\n - {glb_path}")
 
 if __name__ == "__main__":

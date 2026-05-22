@@ -254,11 +254,11 @@ def process_and_visualize(coords_value, output_dir="./output", filter_radius=8,d
     coords_scores = package_to_tensor(spatial_data)
     
     if spatial_data is not None and draw_spatial:
-        spatial_filename = os.path.join(output_dir, f"3dfft_空域_R{filter_radius}.html")
+        spatial_filename = os.path.join(output_dir, f"3dfft_spatial_R{filter_radius}.html")
         plot_spatial_heatmap(spatial_data, spatial_filename, filter_radius)
 
     if freq_data is not None and draw_freq:
-        freq_filename = os.path.join(output_dir, f"3dfft_频域_spectrum.html")
+        freq_filename = os.path.join(output_dir, f"3dfft_frequency_spectrum.html")
         plot_freq_domain(freq_data, freq_filename)
     
     return coords_scores,freq_data["hfer"] 

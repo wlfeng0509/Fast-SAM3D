@@ -3,29 +3,29 @@ import argparse
 import math
 
 
-def parse_f3c_args():
+def parse_token_args():
     parser = argparse.ArgumentParser(
-        description="Trellis with Pluggable Fast3Dcache and Sampler Acceleration",
+        description="Trellis with token pruning and sampler acceleration",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     mode_group = parser.add_argument_group('Mode Control & Steps')
-    mode_group.add_argument("--use_f3c", action="store_true", help="Fast3Dcache acceleration。")
+    mode_group.add_argument("--use_token", action="store_true", help="Token pruning acceleration.")
     mode_group.add_argument("--euler_steps", type=int, default=25, help="--")
     
-    f3c_strategy_group = parser.add_argument_group('Fast3Dcache Scheduling Strategy')
-    f3c_strategy_group.add_argument("--anchor_ratio", type=float, default=None, 
+    token_strategy_group = parser.add_argument_group('Token Pruning Scheduling Strategy')
+    token_strategy_group.add_argument("--anchor_ratio", type=float, default=None,
                                      help="--")
-    f3c_strategy_group.add_argument("--assumed_slope", type=float, default=None, help="--")
+    token_strategy_group.add_argument("--assumed_slope", type=float, default=None, help="--")
 
-    f3c_strategy_group.add_argument("--full_sampling_ratio", type=float, default=0.2, 
-                                     help="Phase 1 of Fast3Dcache。")
-    f3c_strategy_group.add_argument("--full_sampling_end_ratio", type=float, default=0.75, 
-                                     help="Phase 2 of Fast3Dcache")
-    f3c_strategy_group.add_argument("--aggressive_cache_ratio", type=float, default=0.7, 
-                                     help="Phase 3 of Fast3Dcache")
+    token_strategy_group.add_argument("--full_sampling_ratio", type=float, default=0.2,
+                                     help="Phase 1 of token pruning.")
+    token_strategy_group.add_argument("--full_sampling_end_ratio", type=float, default=0.75,
+                                     help="Phase 2 of token pruning.")
+    token_strategy_group.add_argument("--aggressive_cache_ratio", type=float, default=0.7,
+                                     help="Phase 3 of token pruning.")
 
-    f3c_strategy_group.add_argument("--final_phase_correction_freq", type=int, default=3,
+    token_strategy_group.add_argument("--final_phase_correction_freq", type=int, default=3,
                                      help="f_corr")
 
     io_group = parser.add_argument_group('Trellis I/O & Internal Options')
@@ -37,8 +37,8 @@ def parse_f3c_args():
     active_sampler = "Euler"; args.effective_steps = args.euler_steps
     if args.assumed_slope is None: args.assumed_slope = -0.07
     if args.anchor_ratio is None: args.anchor_ratio = 0.2
-    args.use_f3c = True
-    if args.use_f3c:
+    args.use_token = True
+    if args.use_token:
         args.full_sampling_steps = math.floor(args.effective_steps * args.full_sampling_ratio)
         args.full_sampling_end_steps = math.ceil(args.effective_steps * args.full_sampling_end_ratio)
         calculated_anchor_step = math.floor(args.effective_steps * args.anchor_ratio)
