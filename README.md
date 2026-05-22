@@ -61,7 +61,7 @@ Shanghai Jiao Tong University
 ---
 
 ## 📰 News
-- **[2026.05.23]**  🎉[Fast-TRELLIS](https://github.com/mingqiangWu/Fast-TRELLIS) :the implementation of Fast-SAM3D in TRELLIS released.
+- **[2026.05.23]**  🎉[Fast-TRELLIS](https://github.com/mingqiangWu/Fast-TRELLIS) :the implementation of Fast-SAM3D in TRELLIS released.You can switch to the `Fast-TRELLIS` branch or [click here](https://github.com/mingqiangWu/Fast-TRELLIS)
 - **[2026.05.22]**  A Gradio-based user demo is now available
 - **[2026.05.01]** 🎉 Accepted by ICML 2026.
 - **[2026.03.25]**  Fixed the bug where mesh merging was not enabled properly.
