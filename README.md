@@ -17,11 +17,12 @@
 ---
 
 <p align="center">
-  <img src="assets/teaser.png" width="95%" alt="Fast-TRELLIS Teaser"/>
+  <img src="Fast-TRELLIS/assets/teaser.png" width="95%" alt="Fast-TRELLIS Teaser"/>
 </p>
 <p align="center">
   <strong>Fast-TRELLIS transfers the inference-time acceleration design of Fast-SAM3D to TRELLIS for efficient structured 3D generation.</strong>
 </p>
+
 
 
 ## 📌 About This Repository
@@ -69,7 +70,7 @@ After downloading, place the weights into the `\checkpoints` directory.
 **😍Gradio demo system**
 
 <p align="center">
-  <img src="assets/demo.png" width="50%" alt="Fast-TRELLIS Teaser"/>
+  <img src="Fast-TRELLIS/assets/demo.png" width="50%" alt="Fast-TRELLIS Teaser"/>
 </p>
 
 ```
