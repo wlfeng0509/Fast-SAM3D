@@ -53,7 +53,7 @@ class ODESolver:
 # https://en.wikipedia.org/wiki/Euler_method
 class Euler(ODESolver):
     def step(self, dynamics_fn, x_t, t, dt, *args, **kwargs):
-        # 速度
+        # velocity
         velocity = dynamics_fn(x_t, t, *args, **kwargs)
         x_tp1 = linear_approximation_step(x_t, dt, velocity)
         return x_tp1,velocity
@@ -251,35 +251,35 @@ class Euler_faster_slat(ODESolver):
             yield x_t, t0, v
 
 
-# ⭐ easy 版本的求解器 - 专为 slat 设计
+# Easy-version solver designed for SLaT
 class Euler_easy_slat(ODESolver):
     def __init__(self, thresh=0.10, ret_steps=3, full_steps=25):
         """
         Args:
-            thresh (float): 累积误差阈值。越大越快，但画质越低。建议 0.05 - 0.15。
-            ret_steps (int): 预热步数，开始的几步强制计算，不使用 Cache。
-            full_steps (int): 总推理步数，用于判断是否处于结尾阶段（结尾通常不跳过）。
+            thresh (float): Accumulated error threshold. Larger is faster but lowers quality. Recommended range: 0.05 - 0.15.
+            ret_steps (int): Warm-up steps. The first few steps are forced to compute without using Cache.
+            full_steps (int): Total inference steps, used to determine whether execution is in the final stage, which is usually not skipped.
         """
         super().__init__()
         self.thresh = thresh   
         self.ret_steps = ret_steps 
         self.full_steps = full_steps 
         
-        # 运行时状态变量
-        self.accumulated_error = 0.0  # 当前累积的预测误差，超过阈值就会强制重算
-        self.k = None  # 敏感度系数 (K值)，近似 Lipschitz 常数，衡量输出对输入的敏感度
-        self.prev_x = None          # 上一步的输入 x_{t-1}
-        self.prev_v = None          # 上一步的输出 velocity_{t-1}
-        self.prev_prev_x = None     # 上上步的输入 x_{t-2} (用于计算历史变化率)
-        self.cache = None           # 核心缓存：存储变换向量 (velocity - x)
+        # Runtime state variables
+        self.accumulated_error = 0.0  # Current accumulated prediction error; recompute when it exceeds the threshold
+        self.k = None  # Sensitivity coefficient (K value), an approximate Lipschitz constant measuring output sensitivity to input
+        self.prev_x = None          # previous-step input x_{t-1}
+        self.prev_v = None          # previous-step output velocity_{t-1}
+        self.prev_prev_x = None     # input from two steps ago x_{t-2} (used to compute historical rate of change)
+        self.cache = None           # Core cache: stores the transform vector (velocity - x)
         
-        # 统计数据
-        self.skipped_steps = 0      # 记录跳过了多少步
-        self.total_steps_run = 0    # 记录总共跑了多少步
+        # Statistics
+        self.skipped_steps = 0      # record how many steps were skipped
+        self.total_steps_run = 0    # record how many steps ran in total
         print(f"Real compute step indices: {self.calc_steps_list}")
         self.calc_steps_list = []
 
-    # 重置函数
+    # Reset function
     def reset_state(self):
         self.accumulated_error = 0.0
         self.k = None
@@ -296,93 +296,93 @@ class Euler_easy_slat(ODESolver):
         self.total_steps_run += 1
         current_step_idx = self.total_steps_run - 1
         
-        # 1. 强制计算区间 (Warm-up 和 结尾)
+        # 1. Forced-computation interval (warm-up and final steps)
         should_calc = True
-        cutoff_steps = self.full_steps - 1 # 最后两步通常需要精细调整
+        cutoff_steps = self.full_steps - 1 # the last two steps usually need fine adjustment
         
         if current_step_idx < self.ret_steps or current_step_idx >= cutoff_steps:
             should_calc = True
-            self.accumulated_error = 0 # 重置误差
+            self.accumulated_error = 0 # reset error
         else:
-            # 2. 尝试使用 Cache 的决策逻辑
+            # 2. Decision logic for trying to use Cache
             if self.prev_x is not None and self.prev_v is not None:
-                # 计算输入的变化量 (当前 x - 上一步 x)
+                # Compute input change (current x - previous x)
                 input_change = (x_t - self.prev_x).abs().mean()
                 
-                # 如果有 K 值，预测误差
+                # Predict error if K is available
                 if self.k is not None:
-                    # 归一化因子 (用上一步输出的模长，防止数值尺度问题)
+                    # Normalization factor (uses the previous output norm to avoid scale issues)
                     output_norm = self.prev_v.abs().mean() + 1e-6
-                    # 预测误差 = 敏感度 K * (输入变化 / 输出模长)
+                    # Predicted error = sensitivity K * (input change / output norm)
                     pred_change = self.k * (input_change / output_norm)
                     self.accumulated_error += pred_change
                     
-                    # 判定
+                    # Decision
                     if self.accumulated_error < self.thresh:
                         should_calc = False
                     else:
                         should_calc = True
-                        self.accumulated_error = 0 # 误差清零，准备重新计算
+                        self.accumulated_error = 0 # clear error before recomputation
                 else:
-                    should_calc = True # 没有 K 值时必须计算
+                    should_calc = True # must compute when K is unavailable
                     
             else:
                 should_calc = True
 
-        # 3. 执行计算 或 复用 Cache
+        # 3. Execute computation or reuse Cache
         if should_calc:
-            # --- 真实运行模型 ---
+            # --- Actually run the model ---
             velocity = dynamics_fn(x_t, t, *args, **kwargs)
             self.calc_steps_list.append(current_step_idx)
             
-            # --- 更新 easy 状态 (计算 K 和缓存向量) ---
+            # --- Update Easy state (compute K and cache vector) ---
             if self.prev_v is not None and self.prev_x is not None:
-                # 计算输出变化量
+                # Compute output change
                 output_change = (velocity - self.prev_v).abs().mean()
                 
-                # 计算上一步的输入变化量 (用于计算 K)
+                # Compute previous-step input change (used to compute K)
                 if self.prev_prev_x is not None:
                     prev_input_change = (self.prev_x - self.prev_prev_x).abs().mean() + 1e-8
-                    # 更新 K 值: 输出变化 / 输入变化
-                    # 对应 Wan2.1: self.k = output_change / input_change
+                    # Update K value: output change / input change
+                    # Corresponds to Wan2.1: self.k = output_change / input_change
                     current_k = output_change / prev_input_change
                     
-                    # 可以选择平滑更新 K (Exponential Moving Average)
+                    # Optionally smooth K updates (Exponential Moving Average)
                     if self.k is None:
                         self.k = current_k
                     else:
                         self.k = 0.5 * self.k + 0.5 * current_k 
 
-            # 更新历史指针
+            # Update history pointers
             self.prev_prev_x = self.prev_x
-            self.prev_x = x_t.detach().clone() # Detach 避免显存泄露
+            self.prev_x = x_t.detach().clone() # Detach to avoid GPU memory leaks
             self.prev_v = velocity.detach().clone()
             
-            # 更新 Cache: Wan2.1 核心公式 cache = output - input
-            # 这里的 assumption 是 v(x) \approx x + C
+            # Update Cache: Wan2.1 core formula cache = output - input
+            # The assumption here is v(x) \approx x + C
             self.cache = velocity - x_t
             
         else:
-            # --- 跳过计算 (easy mode) ---
+            # --- Skip computation (easy mode) ---
             self.skipped_steps += 1
-            # 核心复用公式: current_output = current_input + cache
-            # 即: v_t = x_t + (v_{t-1} - x_{t-1})
+            # Core reuse formula: current_output = current_input + cache
+            # That is: v_t = x_t + (v_{t-1} - x_{t-1})
 
-            # ⭐ 计算误差
+            # Compute error
             velocity = x_t + self.cache
 
-            # 注意：跳过步不更新 K 值，也不更新 prev_prev_x，因为没有真实观测值
-            # 但我们需要更新 prev_x 和 prev_v 以便下一步计算 input_change
+            # Note: skipped steps do not update K or prev_prev_x because there is no real observation
+            # But prev_x and prev_v must be updated so the next step can compute input_change
             # self.prev_prev_x = self.prev_x
             self.prev_x = x_t.detach().clone()
             self.prev_v = velocity.detach().clone()
 
-        # 4. 欧拉推进 (x_{t+1} = x_t + v * dt)
+        # 4. Euler advance (x_{t+1} = x_t + v * dt)
         x_tp1 = linear_approximation_step(x_t, dt, velocity)
         
         return x_tp1, velocity
 
-    # 必须重写 solve_iter 来初始化状态
+    # solve_iter must be overridden to initialize state
     def solve_iter(self, dynamics_fn, x_init, times, *args, **kwargs):
         self.reset_state()
         print(f" Total steps   : {total_steps_run}")
@@ -390,7 +390,7 @@ class Euler_easy_slat(ODESolver):
         x_t = x_init
         for t0, t1 in zip(times[:-1], times[1:]):
             dt = t1 - t0
-            # 调用上面的 step
+            # Call the step above
             x_t, v = self.step(dynamics_fn, x_t, t0, dt, *args, **kwargs)
             yield x_t, t0, v
             
@@ -399,15 +399,15 @@ class Euler_easy_slat(ODESolver):
         print(f"Real compute step indices: {self.calc_steps_list}")
         print(f"Speedup: {self.total_steps_run / real_runs:.2f}x")
 
-# ⭐ easy 版本的求解器 - 专为 ss 设计
+# Easy-version solver designed for SS
 # print("Euler_easy_ss", ret_steps, full_steps, thresh)
 
     def __init__(self, thresh=1.0, ret_steps=6, full_steps=25):
         """
         Args:
-            thresh (float): 累积误差阈值。
-            ret_steps (int): 预热步数。
-            full_steps (int): 总推理步数。
+            thresh (float): Accumulated error threshold.
+            ret_steps (int): Warm-up steps.
+            full_steps (int): Total inference steps.
         """
         super().__init__()
         self.thresh = thresh    
@@ -416,10 +416,10 @@ class Euler_easy_slat(ODESolver):
         # print("Euler_easy_ss", ret_steps, full_steps, thresh)
         
         self.accumulated_error = 1.5   
-        self.k = None   # 全局标量 k (用于决定跳过)
-        self.k_map = None # [新增] 空间 k_map (用于分析 Token 难度)
+        self.k = None   # Global scalar k (used to decide whether to skip)
+        self.k_map = None # [Added] Spatial k_map (used to analyze Token difficulty)
         
-        # 状态变量现在存储的是字典
+        # State variables are now stored as dictionaries
         self.prev_x = None          
         self.prev_v = None          
         self.prev_prev_x = None  
@@ -430,7 +430,7 @@ class Euler_easy_slat(ODESolver):
             
         self.skipped_step_indices = []
 
-        # taylor相关的
+        # Taylor-related
         self.cache_dir = {}
         self.current = {
             'step': 0,
@@ -438,11 +438,11 @@ class Euler_easy_slat(ODESolver):
         }
 
         
-    # 重置缓存
+    # Reset cache
     def reset_state(self):
         self.accumulated_error = 0.0
         self.k = None
-        self.k_map = None # [新增] 重置 k_map
+        self.k_map = None # [Added] Reset k_map
 
         self.prev_x = None
         self.prev_v = None
@@ -450,14 +450,14 @@ class Euler_easy_slat(ODESolver):
 
         self.easy_cache = {} 
         self.taylor_cache = None
-        self.raw_cache = {} # 这个直接复用
+        self.raw_cache = {} # Reuse this directly
 
         self.skipped_step_indices = []
 
 
-    # 计算两个字典差值的绝对值均值 (返回标量, 用于 input_change, output_change)
+    # Compute the mean absolute difference between two dictionaries (returns a scalar for input_change and output_change)
     def _compute_dict_diff_mean(self, d1, d2):
-        """计算两个字典差值的绝对值均值 (返回标量, 用于 input_change, output_change)"""
+        """Compute the mean absolute difference between two dictionaries (returns a scalar for input_change and output_change)."""
         diffs = []
         # k = "shape"
         for k in d1.keys():
@@ -465,49 +465,49 @@ class Euler_easy_slat(ODESolver):
             diffs.append(diff)
         return torch.stack(diffs).mean()
 
-    # 计算值的模长均值 (返回标量, 用于 output_norm)
+    # Compute the mean value norm (returns a scalar for output_norm)
     def _compute_dict_norm_mean(self, d):
-        """计算字典的模长均值 (返回标量, 用于 output_norm)"""
+        """Compute the mean norm of a dictionary (returns a scalar for output_norm)."""
         norms = []
         for v in d.values():
             norms.append(v.abs().mean())
         return torch.stack(norms).mean()
 
-    # 平均计算 字典内个模态的差值
+    # Average the differences across modalities in the dictionary
     def _compute_dict_diff_map(self, d1, d2):
         """
-        [新增] 计算两个字典差值的空间分布 (返回张量 map)
-        假设输入形状为 (B, C, H, W) 或 (B, C, N)，在 Dim=1 (Channel) 上求平均，保留空间维度
+        [Added] Compute the spatial distribution of differences between two dictionaries (returns a tensor map)
+        Assumes the input shape is (B, C, H, W) or (B, C, N); averages over Dim=1 (Channel) while preserving spatial dimensions
         """
         diff_maps = []
         for k in d1.keys():
-            # (d1[k] - d2[k]).abs() 形状为 (B, C, H, W)
-            # .mean(dim=1, keepdim=True) 形状为 (B, 1, H, W)，即压缩 Channel 维度
+            # (d1[k] - d2[k]).abs() has shape (B, C, H, W)
+            # .mean(dim=1, keepdim=True) has shape (B, 1, H, W), compressing the Channel dimension
             diff = (d1[k] - d2[k]).abs().mean(dim=1, keepdim=True)
             diff_maps.append(diff)
         
-        # 如果有多个模态，我们将它们的 diff map 平均起来
-        # 注意：这里假设所有模态的空间分辨率一致。如果不一致，建议只取主模态(如'shape')
+        # If there are multiple modalities, average their diff maps
+        # Note: this assumes all modalities have the same spatial resolution. If not, use only the main modality (for example, 'shape')
         return torch.stack(diff_maps).mean(dim=0)
 
-    # 复制字典
+    # Copy dictionary
     def _dict_clone(self, d):
-        """字典 Clone + Detach"""
+        """Clone + detach dictionary."""
         return {k: v.detach().clone() for k, v in d.items()}
 
-    # 计算两个字典的差值，仍然返回字典
+    # Compute the difference between two dictionaries, still returning a dictionary
     def compute_dict_diff(self,d1, d2):
-        # 使用字典推导式高效计算
+        # Use dictionary comprehensions for efficient computation
         return {k: d1[k] - d2[k] for k in d1.keys()}\
         
-    # 计算两个字典的和，仍然返回字典
+    # Compute the sum of two dictionaries, still returning a dictionary
     def compute_dict_add(self,d1, d2):
-        # 使用字典推导式高效计算
+        # Use dictionary comprehensions for efficient computation
         return {k: d1[k] + d2[k] for k in d1.keys()}
     
     def step(self, dynamics_fn, x_t, t, dt, *args, **kwargs): 
         current_step_idx = self.current.get('step', 0)
-        # 1. 决策逻辑 (保持你原有的标量 k 逻辑，用于决定是否跳过整步)
+        # 1. Decision logic (keeps the original scalar k logic used to decide whether to skip the whole step)
         should_calc = True
         cutoff_steps = self.full_steps - 1 
 
@@ -538,11 +538,11 @@ class Euler_easy_slat(ODESolver):
                 self.accumulated_error = 0
 
         print("should_calc",should_calc)
-        # 2. 执行计算 或 复用 Cache
+        # 2. Execute computation or reuse Cache
         if should_calc:
             velocity = dynamics_fn(x_t, t, *args, **kwargs)
 
-            # --- 更新标量 k (全局决策用) ---
+            # --- Update scalar k (for global decisions) ---
             if self.prev_v is not None and self.prev_prev_x is not None:
                 # output_change = velocity['shape'] - self.prev_v['shape']
                 output_change = self._compute_dict_diff_mean(velocity, self.prev_v) + 1e-8
@@ -555,21 +555,21 @@ class Euler_easy_slat(ODESolver):
                 self.k = current_k if self.k is None else 0.7 * self.k + 0.3 * current_k
 
             # ====================================================
-            # ⭐ 计算空间 k_map (速度+加速度得分)
+            # Compute spatial k_map (velocity + acceleration score)
             if 'shape' in velocity:
-                curr_v = velocity['shape'] # 形状 (B, N, C)
+                curr_v = velocity['shape'] # shape (B, N, C)
                 
-                # A. 计算速度得分 (L2 Norm)，dim=2 通常是 Channel 维度
+                # A. Compute velocity score (L2 Norm); dim=2 is usually the Channel dimension
                 l2_scores = torch.norm(curr_v, p=2, dim=2, keepdim=True)
 
-                # B. 计算加速度得分 (与前一步速度的差异)
+                # B. Compute acceleration score (difference from previous-step velocity)
                 if self.prev_v is not None and 'shape' in self.prev_v:
                     prev_v = self.prev_v['shape']
                     accel_scores = torch.norm(curr_v - prev_v, p=2, dim=2, keepdim=True)
                 else:
                     accel_scores = torch.zeros_like(l2_scores)
 
-                # C. 空间归一化 (Min-Max Normalization)
+                # C. Spatial normalization (Min-Max Normalization)
                 def normalize_map(m):
                     m_min = m.min()
                     m_max = m.max()
@@ -578,20 +578,20 @@ class Euler_easy_slat(ODESolver):
                 l2_norm_map = normalize_map(l2_scores)
                 accel_norm_map = normalize_map(accel_scores)
 
-                # D. 融合得分
+                # D. Fuse scores
                 accel_weight = getattr(self, 'ACCELERATION_WEIGHT', 0.7)
                 # print("update accel_weight")
                 current_k_map = (accel_weight * accel_norm_map) + ((1.0 - accel_weight) * l2_norm_map)
 
-                # E. EMA 更新 k_map
+                # E. EMA update k_map
                 if self.k_map is None:
                     self.k_map = current_k_map
                 else:
-                    # 只有在特定步数范围内更新，或者全过程更新
+                    # Update only within a specific step range, or update throughout the full process
                     self.k_map = 0.9 * self.k_map + 0.1 * current_k_map
             # ====================================================
 
-            # 更新历史指针
+            # Update history pointers
             self.prev_prev_x = self.prev_x
             self.prev_x = self._dict_clone(x_t)
             self.prev_v = self._dict_clone(velocity)
@@ -610,7 +610,7 @@ class Euler_easy_slat(ODESolver):
             # self.raw_cache = self._dict_clone(velocity)
             
         else:
-            # --- 跳过计算，复用 Cache ---
+            # --- Skip computation and reuse Cache ---
             velocity = {}
             velocity =  self.compute_dict_add(x_t,self.easy_cache)
 
@@ -633,12 +633,12 @@ class Euler_easy_slat(ODESolver):
             
             
         self.current['step'] += 1
-        # 3. 欧拉推进 
+        # 3. Euler advance 
         x_tp1 = linear_approximation_step(x_t, dt, velocity)
         return x_tp1, velocity
 
 
-    # 必须重写 solve_iter 来初始化状态并输出统计
+    # solve_iter must be overridden to initialize state and output statistics
     def solve_iter(self, dynamics_fn, x_init, times, *args, **kwargs):
         self.reset_state()
         print(f" Total steps   : {total_steps_run}")
@@ -650,7 +650,7 @@ class Euler_easy_slat(ODESolver):
             x_t, v = self.step(dynamics_fn, x_t, t0, dt, *args, **kwargs)
             yield x_t, t0, v 
             
-        # --- 统计输出部分 ---
+        # --- Statistics output section ---
         total_steps_run = self.current['step']+1
         computed_steps = total_steps_run - len(self.skipped_step_indices) 
         skip_ratio = (len(self.skipped_step_indices)  / total_steps_run * 100) if total_steps_run > 0 else 0

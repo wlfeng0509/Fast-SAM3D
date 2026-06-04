@@ -336,7 +336,7 @@ class ClassifierFreeGuidance_token(ClassifierFreeGuidance):
                 raise RuntimeError(
                     f"cannot call `ClassifierFreeGuidance` module without condition"
                 )
-            # 传给 backbone
+            # pass to backbone
             return self.backbone(x, t, fast_update_indices=fast_update_indices)
         else:  # conditional arguments are provided
             # training mode

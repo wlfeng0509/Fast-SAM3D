@@ -130,7 +130,7 @@ class Inference:
 
     def __call__(
         self,
-        image: Union[Image.Image, np.ndarray], # 图像
+        image: Union[Image.Image, np.ndarray], # image
         mask: Optional[Union[None, Image.Image, np.ndarray]], # mask
         seed: Optional[int] = None,
         pointmap=None,

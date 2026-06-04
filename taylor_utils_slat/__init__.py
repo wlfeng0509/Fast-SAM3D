@@ -73,7 +73,7 @@ def derivative_approximation(cache_dic: Dict, current: Dict, feature):
     #difference_distance = current['activated_times'][-1] - current['activated_times'][-2]
 
     updated_taylor_factors = {}
-    # 当前步的
+    # current step
     updated_taylor_factors[0] = feature
 
     for i in range(cache_dic['max_order']):

@@ -70,7 +70,7 @@ class FlowMatching(Base):
     ):
         super().__init__(**kwargs)
 
-        self.reverse_fn = reverse_fn # 这个才是去噪网络
+        self.reverse_fn = reverse_fn # this is the denoising network
         self.sigma_min = sigma_min
         self.inference_steps = inference_steps
         self.time_scale = time_scale
@@ -481,11 +481,11 @@ class FlowMatching_faster(FlowMatching):
 
 
 # ——————————————————————————————————————————————————————————————————
-# ⭐ Easy 版本的
+# Easy version
 class FlowMatching_easy(FlowMatching):
     """
-    继承自 FlowMatching，集成了 Easy 求解器。
-    如果你的基类是 ConditionalFlowMatching，请将括号内的父类改为 ConditionalFlowMatching。
+    Inherits from FlowMatching and integrates the Easy solver.
+    If your base class is ConditionalFlowMatching, change the parent class in parentheses to ConditionalFlowMatching.
     """
 
     def __init__(
@@ -497,19 +497,19 @@ class FlowMatching_easy(FlowMatching):
         solver_kwargs=None,
         **kwargs
     ):
-        # 自动初始化 solver_kwargs
+        # Automatically initialize solver_kwargs
         if solver_kwargs is None:
             solver_kwargs = {}
         
-        # 将 Easy 的核心参数注入 solver_kwargs
-        # 使用 setdefault 允许用户在 solver_kwargs 中覆盖这些值
+        # Inject Easy core parameters into solver_kwargs
+        # Use setdefault so users can override these values in solver_kwargs
         # solver_kwargs.setdefault("thresh", 1.0)
         # solver_kwargs.setdefault("ret_steps", 2)
         # 1.0:20-step，2.0：21-step, 3.0:22-step
         solver_kwargs.setdefault("thresh", 2.5)
         solver_kwargs.setdefault("ret_steps", 2)
             
-        # 调用父类初始化
+        # Call parent initialization
         super().__init__(
             reverse_fn=reverse_fn,
             solver_method=solver_method,
@@ -527,15 +527,15 @@ class FlowMatching_easy(FlowMatching):
         x_0 = self._generate_noise(x_shape, x_device)
         t_seq = self._prepare_t().to(x_device)
  
-        # 步数迭代
+        # Step iteration
         for x_t, t, v in self._solver.solve_iter(
-            self._generate_dynamics, # 模型函数
+            self._generate_dynamics, # model function
             x_0,
             t_seq,
             *args_conditionals,
             **kwargs_conditionals,
         ):
-            yield t, x_t, () # 结果
+            yield t, x_t, () # result
      
         # import pdb; pdb.set_trace()
 
@@ -547,18 +547,18 @@ class FlowMatching_easy(FlowMatching):
         *args_conditionals,
         **kwargs_conditionals,
     ):
-        # 骨干网络的前向传播,主体就是每个体素的latent，维度为8
+        # Backbone forward pass; the main tensor is each voxel latent with dimension 8
         # print("x_t.shape,t", x_t.shape, t, args_conditionals[0].shape, args_conditionals[1].shape)
         # print("x_t.shape,t", x_t.shape, t, args_conditionals[0].shape, args_conditionals[1].shape)
 
         # import pdb; pdb.set_trace()
-        # 去噪网络
+        # denoising network
         return self.reverse_fn(x_t, t * self.time_scale, *args_conditionals, **kwargs_conditionals)
 
 
 
 # ——————————————————————————————————————————————————————————————————
-# ⭐ Taylor 版本的
+# Taylor version
 from taylor_utils_slat import (
     derivative_approximation,
     taylor_cal_type,
@@ -568,8 +568,8 @@ from taylor_utils_slat import (
 )
 class FlowMatching_taylorseer(FlowMatching):
     """
-    继承自 FlowMatching，集成了 TaylorSeer 求解器。
-    如果你的基类是 ConditionalFlowMatching，请将括号内的父类改为 ConditionalFlowMatching。
+    Inherits from FlowMatching and integrates the TaylorSeer solver.
+    If your base class is ConditionalFlowMatching, change the parent class in parentheses to ConditionalFlowMatching.
     """
 
     def __init__(
@@ -580,7 +580,7 @@ class FlowMatching_taylorseer(FlowMatching):
         **kwargs
     ):
             
-        # 调用父类初始化
+        # Call parent initialization
         super().__init__(
             reverse_fn=reverse_fn,
             solver_method=solver_method,
@@ -599,15 +599,15 @@ class FlowMatching_taylorseer(FlowMatching):
         t_seq = self._prepare_t().to(x_device)
         self.taylor_dic, self.current = taylor_init(self.inference_steps)
         
-        # 步数迭代
+        # Step iteration
         for x_t, t, v in self._solver.solve_iter(
-            self._generate_dynamics, # 模型函数
+            self._generate_dynamics, # model function
             x_0,
             t_seq,
             *args_conditionals,
             **kwargs_conditionals,
         ):
-            yield t, x_t, () # 结果
+            yield t, x_t, () # result
      
     
     def _generate_dynamics(
@@ -623,7 +623,7 @@ class FlowMatching_taylorseer(FlowMatching):
         self.current['module'] = 'final'
         taylor_cache_init(self.taylor_dic, self.current)
 
-        # 4.self.reverse_fn,得到预测的速度
+        # 4. self.reverse_fn gets the predicted velocity
         if self.current['type'] == 'full':
             v = self.reverse_fn(x_t, t * self.time_scale, *args_conditionals, **kwargs_conditionals)
             derivative_approximation(self.taylor_dic, self.current, v)

@@ -22,7 +22,7 @@ class SparseFeedForwardNet(nn.Module):
         return self.mlp(x)
 
 
-# 用的是这个
+# This is the one being used
 class SparseTransformerBlock(nn.Module):
     """
     Sparse Transformer block (MSA + FFN).
@@ -87,7 +87,7 @@ class SparseTransformerBlock(nn.Module):
             return self._forward(x)
 
 
-# 暂时不看
+# Temporarily ignore this
 class SparseTransformerCrossBlock(nn.Module):
     """
     Sparse Transformer cross-attention block (MSA + MCA + FFN).

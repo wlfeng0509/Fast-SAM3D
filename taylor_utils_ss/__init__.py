@@ -50,7 +50,7 @@ def taylor_cal_type(taylor_dic, current):
         raise ValueError("Unsupported TaylorSeer calculation type")
 
 
-# 计算近似导数
+# Compute approximate derivatives
 def derivative_approximation(cache_dic: Dict, current: Dict, feature: Union[Dict[str, torch.Tensor], torch.Tensor]):
     """Approximate Taylor derivatives from the latest cached feature."""
     if len(current['activated_steps']) < 2:
@@ -139,7 +139,7 @@ def taylor_cache_init(cache_dic: Dict, current: Dict):
     :param cache_dic: Cache dictionary.
     :param current: Current step information.
     """
-    # 存放初始状态的位置，-1是最后一个
+    # Position used to store the initial state; -1 is the last one
     if current['step'] == (current['num_steps'] - 1):
         # print(f"clear cache,{current['step']},{current['num_steps']}")
         # cache_dic['cache'][-1][current['layer']][current['module']] = {}

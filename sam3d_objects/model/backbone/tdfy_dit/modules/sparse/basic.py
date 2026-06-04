@@ -141,7 +141,7 @@ class SparseTensor:
         shape.append(coords[:, 0].max().item() + 1)
         shape.extend([*feats.shape[1:]])
         # ⭐⭐
-        # 强制把 shape 里的每个元素转为 int
+        # Force each element in shape to int
         shape = [int(s) for s in shape]
         
         return torch.Size(shape)

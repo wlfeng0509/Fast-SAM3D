@@ -157,7 +157,7 @@ class ModulatedSparseTransformerCrossBlock(nn.Module):
         self, x: SparseTensor, mod: torch.Tensor, context: torch.Tensor
     ) -> SparseTensor:
         
-        # Block输入 torch.Size([1, 1024]) torch.Size([5248, 1024]) torch.Size([5248, 4]) torch.Size([1, 1024]) torch.Size([1, 5496, 1024])
+        # Block input torch.Size([1, 1024]) torch.Size([5248, 1024]) torch.Size([5248, 4]) torch.Size([1, 1024]) torch.Size([1, 5496, 1024])
         # print("Block input", x.shape, x.feats.shape, x.coords.shape, mod.shape, context.shape)
 
         if self.share_mod:
@@ -202,25 +202,25 @@ class ModulatedSparseTransformerCrossBlock(nn.Module):
             return self._forward(x, mod, context)
 
 
-# 😊😊😊子类
+# Subclass
 class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBlock):
 
     def __init__(self, *args, **kwargs):
-        # 调用父类参数
+        # Call parent parameters
         super().__init__(*args, **kwargs)
 
-    # 修改前向传播
+    # Modify forward pass
     def _forward(
         self, x: SparseTensor, mod: torch.Tensor, context: torch.Tensor,current, cache_dic
     ) -> SparseTensor:
         # print("sparse")
 
-        # FLOPs 初始化
-        B, N, C = x.shape  # 获取输入 x 的 shape
+        # Initialize FLOPs
+        B, N, C = x.shape  # get the shape of input x
         flops = 0
-        test_FLOPs = cache_dic.get('test_FLOPs', False)  # 检查是否启用 FLOPs 测量
+        test_FLOPs = cache_dic.get('test_FLOPs', False)  # check whether FLOPs measurement is enabled
         
-        # 嵌入分解
+        # Embedding decomposition
         if self.share_mod:
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = mod.chunk(
                 6, dim=1
@@ -231,7 +231,7 @@ class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBloc
             )
         # ❤️
         if current['type'] == 'full':
-            # 计算计算量
+            # Compute computation cost
             if test_FLOPs:
                 flops += 2 * B * N * C
             # AdaLN FLOPs (SiLU and Linear)
@@ -242,7 +242,7 @@ class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBloc
             h = x.replace(self.norm1(x.feats))
             h = h * (1 + scale_msa) + shift_msa
 
-            # 1.准备attn模块
+            # 1. Prepare attn module
             current['module'] = 'attn'
             taylor_cache_init(cache_dic, current)
             h = self.self_attn(h)
@@ -250,7 +250,7 @@ class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBloc
             h = h * gate_msa
             x = x + h
 
-            # 2. 准备 cross-attn 模块
+            # 2. Prepare cross-attn module
             current['module'] = 'cross-attn'
             taylor_cache_init(cache_dic, current)
             h = x.replace(self.norm2(x.feats))
@@ -260,7 +260,7 @@ class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBloc
             h = x.replace(self.norm3(x.feats))
             h = h * (1 + scale_mlp) + shift_mlp
 
-            # 3. 准备 mlp模块
+            # 3. Prepare mlp module
             current['module'] = 'mlp'
             taylor_cache_init(cache_dic, current)
             h = self.mlp(h)
@@ -288,7 +288,7 @@ class ModulatedSparseTransformerCrossBlock_T(ModulatedSparseTransformerCrossBloc
 
         return x
     
-    # 修改前向传播
+    # Modify forward pass
     def forward(
         self, x: SparseTensor, mod: torch.Tensor, context: torch.Tensor, current, cache_dic
     ) -> SparseTensor:

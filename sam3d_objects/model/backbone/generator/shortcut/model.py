@@ -604,7 +604,7 @@ class ShortCut_faster(ShortCut):
     
 
 # ——————————————————————————————————————————————————————————————————
-# ⭐⭐封装 easy
+# Wrap Easy
 class ShortCut_easy(ShortCut):
     def __init__(
         self,
@@ -622,8 +622,8 @@ class ShortCut_easy(ShortCut):
 
 
         super().__init__(**kwargs)
-        # 传入解码器,一会用
-        solver_method = "euler_easy_ss" # 传入一个重新包装后的求解器
+        # Pass in the decoder for later use
+        solver_method = "euler_easy_ss" # Pass in a rewrapped solver
         solver_kwargs = {} 
         solver_kwargs.setdefault("thresh", 2.0)
         solver_kwargs.setdefault("ret_steps", 4)
@@ -634,11 +634,11 @@ class ShortCut_easy(ShortCut):
             solver_method, solver_kwargs
         )
 
-        # 生成参数
+        # Generation parameters
         self.decoder = None
 
     
-    # 1.⭐⭐forward直接调用的东西
+    # 1. Items called directly by forward
     def forward(self, x_shape, x_device, *args_conditionals, **kwargs_conditionals):
     
         result = self.generate(
@@ -715,18 +715,18 @@ class ShortCut_easy(ShortCut):
             current_t = t.item() if torch.is_tensor(t) else t
             self.debug_history['t'].append(current_t)
 
-            # 显式指定我们要记录的 key
+            # Explicitly specify the keys to record
             target_key = 'shape'
             if isinstance(x_t, dict) and target_key in x_t:
                 if target_key not in self.debug_history['metrics']:
                     self.debug_history['metrics'][target_key] = {'x_l1': [], 'v_l1': []}
                 
-                # 计算 x_t['shape'] 的 L1 Mean
+                # Compute the L1 Mean of x_t['shape']
                 x_val = x_t[target_key]
                 x_l1 = x_val.abs().mean().item()
                 self.debug_history['metrics'][target_key]['x_l1'].append(x_l1)
 
-                # 计算 v['shape'] 的 L1 Mean
+                # Compute the L1 Mean of v['shape']
                 if isinstance(v, dict) and target_key in v:
                     v_val = v[target_key]
                     v_l1 = v_val.abs().mean().item()
@@ -753,11 +753,11 @@ class ShortCut_easy(ShortCut):
         d = torch.tensor(
             [d * self.time_scale], device=_get_device(x_t), dtype=torch.float32
         )
-        # 4.self.reverse_fn,得到预测的速度
+        # 4. self.reverse_fn gets the predicted velocity
         v = self.reverse_fn(x_t, t, *args_conditionals, d=d, **kwargs_conditionals)
         return  v
     
-    # 解码出形状
+    # Decode the shape
     def decode(self,shape_latent):
         ss = self.decoder(
             shape_latent.permute(0, 2, 1)
@@ -769,15 +769,15 @@ class ShortCut_easy(ShortCut):
         return grid_t
 
 
-    # 绘制x_t和v的图
+    # Plot x_t and v
     def plot_debug_statistics(self, save_path=None, x_ylim=(0.5,1.0), v_ylim=(0,1.8)):
         """
-        绘制 generate_iter 过程中记录的 x_t 和 v 的 L1 均值变化曲线。
+        Plot the L1 mean curves of x_t and v recorded during generate_iter.
         
         Args:
-            save_path (str, optional): 图片保存路径.
-            x_ylim (tuple/list, optional): x_l1 图的 Y 轴范围, 如 (0, 2.0).
-            v_ylim (tuple/list, optional): v_l1 图的 Y 轴范围, 如 (0, 0.5).
+            save_path (str, optional): Image save path.
+            x_ylim (tuple/list, optional): Y-axis range for the x_l1 plot, such as (0, 2.0).
+            v_ylim (tuple/list, optional): Y-axis range for the v_l1 plot, such as (0, 0.5).
         """
         import matplotlib.pyplot as plt
         import math
@@ -786,7 +786,7 @@ class ShortCut_easy(ShortCut):
             print("Warning: No debug history found. Please run generate_iter first.")
             return
 
-        # 获取数据字典
+        # Get the data dictionary
         metrics = self.debug_history['metrics']
         keys = list(metrics.keys())
         num_keys = len(keys)
@@ -794,46 +794,46 @@ class ShortCut_easy(ShortCut):
         if num_keys == 0:
             return
 
-        # 设置绘图布局：每个 key 占一行，包含两个子图 (State L1, Velocity L1)
+        # Set the plot layout: each key occupies one row with two subplots (State L1, Velocity L1)
         fig, axes = plt.subplots(num_keys, 2, figsize=(12, 4 * num_keys), sharex=True)
         
-        # 如果只有一个 key，axes 是一维数组，需要处理一下
+        # If there is only one key, axes is a 1D array and needs handling
         if num_keys == 1:
             axes = axes.reshape(1, -1)
 
         for i, key in enumerate(keys):
             data = metrics[key]
             
-            # 生成横坐标索引：1, 2, 3, 4, ...
+            # Generate x-axis indices: 1, 2, 3, 4, ...
             num_steps = len(data['x_l1'])
             step_indices = list(range(1, num_steps + 1))
 
             ax_x = axes[i, 0]
             ax_v = axes[i, 1]
 
-            # ================= 绘制 State x_t L1 =================
+            # ================= Plot State x_t L1 =================
             ax_x.plot(step_indices, data['x_l1'], label=f'{key} x_l1', color='tab:blue', marker='.')
             ax_x.set_title(f"State L1 Mean: {key}")
             ax_x.set_ylabel("Mean(|x|)")
             ax_x.grid(True, alpha=0.3)
             ax_x.legend()
             
-            # 手动设置 x 的 Y 轴范围
+            # Manually set the Y-axis range for x
             if x_ylim is not None:
                 ax_x.set_ylim(x_ylim)
 
-            # ================= 绘制 Velocity v L1 =================
+            # ================= Plot Velocity v L1 =================
             ax_v.plot(step_indices, data['v_l1'], label=f'{key} v_l1', color='tab:orange', marker='.')
             ax_v.set_title(f"Velocity L1 Mean: {key}")
             ax_v.set_ylabel("Mean(|v|)")
             ax_v.grid(True, alpha=0.3)
             ax_v.legend()
 
-            # 手动设置 v 的 Y 轴范围
+            # Manually set the Y-axis range for v
             if v_ylim is not None:
                 ax_v.set_ylim(v_ylim)
 
-            # 只在最后一行显示 X 轴标签
+            # Show X-axis labels only on the last row
             if i == num_keys - 1:
                 ax_x.set_xlabel("Step Index")
                 ax_v.set_xlabel("Step Index")
@@ -855,7 +855,7 @@ class ShortCut_easy(ShortCut):
         import os
         import torch
 
-        # --- 1. 数据预处理 ---
+        # --- 1. Data preprocessing ---
         if isinstance(k_map, torch.Tensor):
             k_data = k_map.detach().cpu().numpy()
         else:
@@ -869,13 +869,13 @@ class ShortCut_easy(ShortCut):
         volume = k_data.reshape(16, 16, 16)
         vals_abs = np.abs(volume).flatten()
 
-        # --- 2. 计算自定义百分比排名 ---
+        # --- 2. Compute custom percentile ranks ---
         ranks = np.argsort(np.argsort(vals_abs))
         percentiles = ranks / (len(vals_abs) - 1)
         
-        # 定义新的分箱逻辑：
-        # 0: 0-40% (隐藏), 1: 40-60%, 2: 60-80%, 
-        # 3: 80-85%, 4: 85-90%, 5: 90-95%, 6: 95-100% (高能区)
+        # Define new binning logic:
+        # 0: 0-40% (hidden), 1: 40-60%, 2: 60-80%, 
+        # 3: 80-85%, 4: 85-90%, 5: 90-95%, 6: 95-100% (high-response region)
         bins = np.zeros_like(percentiles, dtype=int)
         bins[percentiles >= 0.40] = 1
         bins[percentiles >= 0.60] = 2
@@ -884,13 +884,13 @@ class ShortCut_easy(ShortCut):
         bins[percentiles >= 0.90] = 5
         bins[percentiles >= 0.95] = 6
         
-        num_bins = 7 # 总共 7 档
+        num_bins = 7 # 7 bins in total
 
-        # --- 3. 生成坐标并过滤 ---
+        # --- 3. Generate coordinates and filter ---
         X, Y, Z = np.mgrid[0:16, 0:16, 0:16]
         X, Y, Z = X.flatten(), Y.flatten(), Z.flatten()
         
-        # 只保留 40% 以上的点 (即 bins >= 1)
+        # Keep only points above 40% (that is, bins >= 1)
         valid_mask = bins >= 4
         
         X_f, Y_f, Z_f = X[valid_mask], Y[valid_mask], Z[valid_mask]
@@ -898,12 +898,12 @@ class ShortCut_easy(ShortCut):
         vals_f = vals_abs[valid_mask]
         perc_f = percentiles[valid_mask]
 
-        # --- 4. 定义颜色映射 (增加高能区细节) ---
+        # --- 4. Define color mapping (add detail for high-response regions) ---
         colors_hex = [
             '#313695', # 0: 0-40% (Hidden)
             '#abd9e9', # 1: 40-60% (Light Blue)
             '#ffffbf', # 2: 60-80% (Pale Yellow)
-            # --- 以下为 Top 20% 的细分 ---
+            # --- The following subdivides the top 20% ---
             '#fdae61', # 3: 80-85% (Orange)
             '#f46d43', # 4: 85-90% (Light Red)
             '#d73027', # 5: 90-95% (Red)
@@ -915,7 +915,7 @@ class ShortCut_easy(ShortCut):
             step_colorscale.append([i / num_bins, colors_hex[i]])
             step_colorscale.append([(i + 1) / num_bins, colors_hex[i]])
 
-        # --- 5. 创建 Plotly 图形 ---
+        # --- 5. Create Plotly figure ---
         fig = go.Figure(data=[go.Scatter3d(
             x=X_f, y=Y_f, z=Z_f,
             mode='markers',
@@ -938,7 +938,7 @@ class ShortCut_easy(ShortCut):
             hoverinfo='text'
         )])
 
-        # --- 6. 布局优化 ---
+        # --- 6. Layout optimization ---
         fig.update_layout(
             title="Focus K-Map: Precision Top 20%",
             scene=dict(
@@ -954,51 +954,51 @@ class ShortCut_easy(ShortCut):
         fig.write_html(save_path)
         print(f"Rendering complete. High-energy regions were subdivided. Saved to: {save_path}")
 
-    # 绘制kmap数值分布
+    # Plot k-map value distribution
     def plot_kmap_distribution(self, k_map,save_path="kmap_distribution.png"):
         """
-        统计 4096 个 Token 的 k 值分布，绘制排序曲线和分布密度图。
+        Analyze the k-value distribution of 4096 Tokens and plot the sorted curve and density distribution.
         """
-        # 1. 获取并处理数据
+        # 1. Get and process data
         if k_map is None:
             print("Warning: k_map is None, skip plotting.")
             return
 
-        # 确保是 [4096] 的一维 numpy 数组
+        # Ensure this is a [4096] one-dimensional numpy array
         k_map = k_map.detach().cpu().numpy().flatten()
         
         if len(k_map) != 4096:
             print(f"Warning: Expected 4096 tokens, got {len(k_map)}")
 
-        # 2. 统计核心指标
+        # 2. Compute core statistics
         mean_val = np.mean(k_map)
         median_val = np.median(k_map)
         max_val = np.max(k_map)
         min_val = np.min(k_map)
         
-        # 计算关键分位数 (用于之前的 20% / 80% 策略)
+        # Compute key quantiles (used for the previous 20% / 80% strategy)
         p20 = np.percentile(k_map, 20)
         p80 = np.percentile(k_map, 80)
 
-        # 3. 创建画布 (左图：排序曲线，右图：密度分布)
+        # 3. Create canvas (left: sorted curve, right: density distribution)
         fig, axes = plt.subplots(1, 2, figsize=(15, 6))
         
         # ==========================
-        # 图 1: 排序后的 K 值曲线 (Sorted Line Chart)
+        # Figure 1: Sorted K-value curve (Sorted Line Chart)
         # ==========================
-        # 作用：直观展示 Token 难度的增长趋势，方便找截断点
+        # Purpose: intuitively show the growth trend of Token difficulty and help choose a cutoff point
         sorted_k = np.sort(k_map)
         x_axis = np.arange(len(sorted_k))
         
         ax1 = axes[0]
         ax1.plot(x_axis, sorted_k, color='#1f77b4', linewidth=2, label='Sorted k values')
         
-        # 标注关键线
+        # Mark key lines
         ax1.axhline(mean_val, color='red', linestyle='--', alpha=0.7, label=f'Mean: {mean_val:.4f}')
         ax1.axvline(4096 * 0.2, color='green', linestyle=':', alpha=0.7, label=f'20% (Easy): k={p20:.2f}')
         ax1.axvline(4096 * 0.8, color='orange', linestyle=':', alpha=0.7, label=f'80% (Hard): k={p80:.2f}')
         
-        # 填充区域 (模拟你的策略)
+        # Fill regions (simulate your strategy)
         ax1.fill_between(x_axis, 0, sorted_k, where=(x_axis < 4096*0.2), color='green', alpha=0.1)
         ax1.fill_between(x_axis, 0, sorted_k, where=(x_axis > 4096*0.8), color='orange', alpha=0.1)
 
@@ -1009,12 +1009,12 @@ class ShortCut_easy(ShortCut):
         ax1.grid(True, alpha=0.3)
 
         # ==========================
-        # 图 2: 分布密度图 (Distribution Density)
+        # Figure 2: Distribution density plot (Distribution Density)
         # ==========================
-        # 作用：展示 k 值主要集中在哪个区间
+        # Purpose: show where k values are mainly concentrated
         ax2 = axes[1]
         
-        # 尝试使用 Seaborn 画平滑曲线 (KDE)，如果没有则用 Matplotlib 直方图
+        # Try to use Seaborn for a smooth KDE curve; if unavailable, use a Matplotlib histogram
         try:
             sns.kdeplot(k_map, ax=ax2, fill=True, color="purple", alpha=0.3, linewidth=2)
             ax2.set_ylabel("Density")
@@ -1023,7 +1023,7 @@ class ShortCut_easy(ShortCut):
             ax2.hist(k_map, bins=50, color='purple', alpha=0.5, density=True)
             ax2.set_ylabel("Frequency")
 
-        # 标注均值
+        # Mark the mean
         ax2.axvline(mean_val, color='red', linestyle='--', label='Mean')
         ax2.axvline(median_val, color='blue', linestyle='-.', label='Median')
         
@@ -1032,7 +1032,7 @@ class ShortCut_easy(ShortCut):
         ax2.legend()
         ax2.grid(True, alpha=0.3)
 
-        # 4. 保存
+        # 4. Save
         plt.tight_layout()
         plt.savefig(save_path, dpi=150)
         print(f"K-Map statistics plot saved to: {save_path}")
@@ -1041,17 +1041,17 @@ class ShortCut_easy(ShortCut):
         print(f"   [Quantile] 80% quantile (hard threshold): {p80:.4f}")
         plt.close()
 
-    # 根据均值分点
+    # Split points based on the mean
     def save_kmap_to_html_mean(self, k_map, save_path="k_map_mean_based.html", multipliers=(1.25, 1.5, 2.0)):
         """
-        基于均值倍率可视化 K-Map。
+        Visualize K-Map based on mean multipliers.
         Args:
-            k_map: 输入数据 (4096 flattened or 16x16x16)
-            save_path: 保存路径
-            multipliers: 一个包含3个浮点数的元组，分别对应三档阈值的倍率。
-                        默认 (1.0, 1.5, 2.0) 代表 >均值, >1.5倍均值, >2倍均值。
+            k_map: Input data (4096 flattened or 16x16x16)
+            save_path: Save path
+            multipliers: A tuple containing 3 floats, corresponding to the multipliers for the three threshold levels.
+                        Default (1.0, 1.5, 2.0) means >mean, >1.5x mean, >2x mean.
         """
-        # --- 1. 数据预处理 ---
+        # --- 1. Data preprocessing ---
         if isinstance(k_map, torch.Tensor):
             k_data = k_map.detach().cpu().numpy()
         else:
@@ -1062,27 +1062,27 @@ class ShortCut_easy(ShortCut):
             print(f"Error: expected 4096 points, got {k_data.size}.")
             return
 
-        # 恢复 3D 结构并取绝对值
+        # Restore the 3D structure and take absolute values
         volume = k_data.reshape(16, 16, 16)
         vals_abs = np.abs(volume).flatten()
         
-        # 计算统计指标
+        # Compute statistical metrics
         mean_val = np.mean(vals_abs)
         max_val = np.max(vals_abs)
         
-        # 防止全0数据的除法错误
+        # Prevent division errors for all-zero data
         if mean_val == 0:
             print("Warning: data mean is 0; heatmap cannot be generated.")
             return
 
-        # --- 2. 基于均值的分箱逻辑 ---
-        # 解包倍率参数
+        # --- 2. Mean-based binning logic ---
+        # Unpack multiplier parameters
         m1, m2, m3 = multipliers
         
-        # 初始化 bins，默认为 0 (隐藏/背景)
+        # Initialize bins, defaulting to 0 (hidden/background)
         bins = np.zeros_like(vals_abs, dtype=int)
         
-        # 逻辑：数值越大，Bin ID 越高，后者覆盖前者
+        # Logic: larger values get higher Bin IDs; later assignments override earlier ones
         # Bin 1: > 1.0 * Mean
         bins[vals_abs >= mean_val * m1] = 1
         # Bin 2: > 1.5 * Mean
@@ -1090,23 +1090,23 @@ class ShortCut_easy(ShortCut):
         # Bin 3: > 2.0 * Mean
         bins[vals_abs >= mean_val * m3] = 3
         
-        # 总共有 4 种状态：0(小于均值), 1(一档), 2(二档), 3(三档)
+        # There are 4 states in total: 0 (below mean), 1 (level 1), 2 (level 2), 3 (level 3)
         num_bins = 4 
 
-        # --- 3. 生成坐标并过滤 ---
+        # --- 3. Generate coordinates and filter ---
         X, Y, Z = np.mgrid[0:16, 0:16, 0:16]
         X, Y, Z = X.flatten(), Y.flatten(), Z.flatten()
         
-        # 过滤：只显示大于均值点 (即 bins >= 1)
-        # 如果你想连小于均值的也显示，可以改这里，但在3D散点图中通常只看高响应区
+        # Filter: show only points above the mean (that is, bins >= 1)
+        # Change this if you also want to show below-mean points, but 3D scatter plots usually focus on high-response regions
         valid_mask = bins >= 1
         
         X_f, Y_f, Z_f = X[valid_mask], Y[valid_mask], Z[valid_mask]
         bins_f = bins[valid_mask]
         vals_f = vals_abs[valid_mask]
 
-        # --- 4. 定义颜色映射 (3档区分) ---
-        # 0: Hidden (不显示), 1: Blue/Cyan, 2: Orange, 3: Red
+        # --- 4. Define color mapping (3-level distinction) ---
+        # 0: Hidden (not shown), 1: Blue/Cyan, 2: Orange, 3: Red
         colors_hex = [
             '#ffffbf',
             '#fdae61',
@@ -1114,19 +1114,19 @@ class ShortCut_easy(ShortCut):
             '#a50026',
         ]
         
-        # 构建离散 Colorscale
+        # Build discrete Colorscale
         step_colorscale = []
         for i in range(num_bins):
             step_colorscale.append([i / num_bins, colors_hex[i]])
             step_colorscale.append([(i + 1) / num_bins, colors_hex[i]])
 
-        # --- 5. 创建 Plotly 图形 ---
+        # --- 5. Create Plotly figure ---
         fig = go.Figure(data=[go.Scatter3d(
             x=X_f, y=Y_f, z=Z_f,
             mode='markers',
             marker=dict(
                 symbol='square',
-                size=6, #稍微调大一点点以便观察
+                size=6, # slightly increase for easier viewing
                 color=bins_f,
                 colorscale=step_colorscale,
                 cmin=0,
@@ -1134,7 +1134,7 @@ class ShortCut_easy(ShortCut):
                 opacity=0.9,
                 colorbar=dict(
                     title="Mean Multiplier",
-                    tickvals=[1.5, 2.5, 3.5], # 刻度位置在色块中间
+                    tickvals=[1.5, 2.5, 3.5], # tick positions are centered in the color blocks
                     ticktext=[
                         f">{m1}x Mean", 
                         f">{m2}x Mean", 
@@ -1143,12 +1143,12 @@ class ShortCut_easy(ShortCut):
                     tickfont=dict(color="white"),
                 )
             ),
-            # Hover 信息显示：具体数值 + 是均值的多少倍
+            # Hover info: exact value + multiple of the mean
             text=[f"Val: {v:.4f}<br>Ratio: {v/mean_val:.2f}x Mean" for v in vals_f],
             hoverinfo='text'
         )])
 
-        # --- 6. 布局优化 ---
+        # --- 6. Layout optimization ---
         fig.update_layout(
             title=f"Mean-Based K-Map (Mean={mean_val:.4f})",
             scene=dict(
@@ -1167,7 +1167,7 @@ class ShortCut_easy(ShortCut):
 
 
 # ——————————————————————————————————————————————————————————————————
-# ⭐⭐封装 taylorseer
+# Wrap TaylorSeer
 from taylor_utils_ss import (
     derivative_approximation,
     taylor_cal_type,
@@ -1191,17 +1191,17 @@ class ShortCut_taylorseer(ShortCut):
     ):
 
         super().__init__(**kwargs)
-        # 传入解码器,一会用
-        # 生成参数
+        # Pass in the decoder for later use
+        # Generation parameters
         self.decoder = None
         self.taylor_dic, self.current = taylor_init(self.inference_steps)
 
         self.k_map_shape = None
-        self.prev_v_true = None # 前一次真实计算的结果
-        self.prev_v = None# 前一次的结果
+        self.prev_v_true = None # previous real computation result
+        self.prev_v = None# previous result
 
     
-    # 1.⭐⭐forward直接调用的东西
+    # 1. Items called directly by forward
     def forward(self, x_shape, x_device, *args_conditionals, **kwargs_conditionals):
         
         self.taylor_dic, self.current = taylor_init(self.inference_steps)
@@ -1290,12 +1290,12 @@ class ShortCut_taylorseer(ShortCut):
         taylor_cache_init(self.taylor_dic, self.current)
 
         v = {}
-        # 4.self.reverse_fn,得到预测的速度
+        # 4. self.reverse_fn gets the predicted velocity
         if self.current['type'] == 'full':
             v = self.reverse_fn(x_t, t, *args_conditionals, d=d, **kwargs_conditionals)
            
             # ------------------------------------------------------------------------
-            # 计算并更新k_map_shape的
+            # Compute and update k_map_shape
             if self.prev_v_true is not None:
                 prev_v_shape = self.prev_v_true['shape']
 
@@ -1306,18 +1306,18 @@ class ShortCut_taylorseer(ShortCut):
                     accel_weight = getattr(self, 'ACCELERATION_WEIGHT', 0.3)
                     current_k_map_shape = (accel_weight * accel_shape) + ((1.0 - accel_weight) * v_shape)
 
-                    # EMA 更新 k_map
+                    # EMA update k_map
                     if self.k_map_shape is None:
                         self.k_map_shape = current_k_map_shape
                     else:
                         self.k_map_shape = 0.8 * self.k_map_shape + 0.2 * current_k_map_shape
 
-            # 更新历史
+            # Update history
             self.prev_v_true = v
             self.prev_v = v
 
             # ------------------------------------------------------------------------
-            # 计算梯度
+            # Compute gradient
             derivative_approximation(self.taylor_dic, self.current, v)
             print("Do not skip")
 
@@ -1330,7 +1330,7 @@ class ShortCut_taylorseer(ShortCut):
         self.current['step'] += 1
         return  v
     
-    # 解码出形状
+    # Decode the shape
     def decode(self,shape_latent):
         ss = self.decoder(
             shape_latent.permute(0, 2, 1)
@@ -1341,16 +1341,16 @@ class ShortCut_taylorseer(ShortCut):
         grid_t = (ss > 0)
         return grid_t
     
-    # 绘制 easy 步数变化图
+    # Plot Easy step changes
     def plot_debug_statistics(self, save_path=None, x_ylim=(0.5,1.0), v_ylim=(0,3.0)):
 
         """
-        绘制 generate_iter 过程中记录的 x_t 和 v 的 L1 均值变化曲线。
+        Plot the L1 mean curves of x_t and v recorded during generate_iter.
         
         Args:
-            save_path (str, optional): 图片保存路径.
-            x_ylim (tuple/list, optional): x_l1 图的 Y 轴范围, 如 (0, 2.0).
-            v_ylim (tuple/list, optional): v_l1 图的 Y 轴范围, 如 (0, 0.5).
+            save_path (str, optional): Image save path.
+            x_ylim (tuple/list, optional): Y-axis range for the x_l1 plot, such as (0, 2.0).
+            v_ylim (tuple/list, optional): Y-axis range for the v_l1 plot, such as (0, 0.5).
         """
         import matplotlib.pyplot as plt
         import math
@@ -1359,7 +1359,7 @@ class ShortCut_taylorseer(ShortCut):
             print("Warning: No debug history found. Please run generate_iter first.")
             return
 
-        # 获取数据字典
+        # Get the data dictionary
         metrics = self.debug_history['metrics']
         keys = list(metrics.keys())
         num_keys = len(keys)
@@ -1367,46 +1367,46 @@ class ShortCut_taylorseer(ShortCut):
         if num_keys == 0:
             return
 
-        # 设置绘图布局：每个 key 占一行，包含两个子图 (State L1, Velocity L1)
+        # Set the plot layout: each key occupies one row with two subplots (State L1, Velocity L1)
         fig, axes = plt.subplots(num_keys, 2, figsize=(12, 4 * num_keys), sharex=True)
         
-        # 如果只有一个 key，axes 是一维数组，需要处理一下
+        # If there is only one key, axes is a 1D array and needs handling
         if num_keys == 1:
             axes = axes.reshape(1, -1)
 
         for i, key in enumerate(keys):
             data = metrics[key]
             
-            # 生成横坐标索引：1, 2, 3, 4, ...
+            # Generate x-axis indices: 1, 2, 3, 4, ...
             num_steps = len(data['x_l1'])
             step_indices = list(range(1, num_steps + 1))
 
             ax_x = axes[i, 0]
             ax_v = axes[i, 1]
 
-            # ================= 绘制 State x_t L1 =================
+            # ================= Plot State x_t L1 =================
             ax_x.plot(step_indices, data['x_l1'], label=f'{key} x_l1', color='tab:blue', marker='.')
             ax_x.set_title(f"State L1 Mean: {key}")
             ax_x.set_ylabel("Mean(|x|)")
             ax_x.grid(True, alpha=0.3)
             ax_x.legend()
             
-            # 手动设置 x 的 Y 轴范围
+            # Manually set the Y-axis range for x
             if x_ylim is not None:
                 ax_x.set_ylim(x_ylim)
 
-            # ================= 绘制 Velocity v L1 =================
+            # ================= Plot Velocity v L1 =================
             ax_v.plot(step_indices, data['v_l1'], label=f'{key} v_l1', color='tab:orange', marker='.')
             ax_v.set_title(f"Velocity L1 Mean: {key}")
             ax_v.set_ylabel("Mean(|v|)")
             ax_v.grid(True, alpha=0.3)
             ax_v.legend()
 
-            # 手动设置 v 的 Y 轴范围
+            # Manually set the Y-axis range for v
             if v_ylim is not None:
                 ax_v.set_ylim(v_ylim)
 
-            # 只在最后一行显示 X 轴标签
+            # Show X-axis labels only on the last row
             if i == num_keys - 1:
                 ax_x.set_xlabel("Step Index")
                 ax_v.set_xlabel("Step Index")
@@ -1421,58 +1421,58 @@ class ShortCut_taylorseer(ShortCut):
             
         plt.close()
 
-    # 归一化
+    # Normalize
     def normalize_map(self,m):
         m_min = m.min()
         m_max = m.max()
         return (m - m_min) / (m_max - m_min + 1e-6)
     
     
-    # 绘制kmap数值分布
+    # Plot k-map value distribution
     def plot_kmap_distribution(self, k_map,save_path="kmap_distribution.png"):
         """
-        统计 4096 个 Token 的 k 值分布，绘制排序曲线和分布密度图。
+        Analyze the k-value distribution of 4096 Tokens and plot the sorted curve and density distribution.
         """
-        # 1. 获取并处理数据
+        # 1. Get and process data
         if k_map is None:
             print("Warning: k_map is None, skip plotting.")
             return
 
-        # 确保是 [4096] 的一维 numpy 数组
+        # Ensure this is a [4096] one-dimensional numpy array
         k_map = k_map.detach().cpu().numpy().flatten()
         
         if len(k_map) != 4096:
             print(f"Warning: Expected 4096 tokens, got {len(k_map)}")
 
-        # 2. 统计核心指标
+        # 2. Compute core statistics
         mean_val = np.mean(k_map)
         median_val = np.median(k_map)
         max_val = np.max(k_map)
         min_val = np.min(k_map)
         
-        # 计算关键分位数 (用于之前的 20% / 80% 策略)
+        # Compute key quantiles (used for the previous 20% / 80% strategy)
         p20 = np.percentile(k_map, 20)
         p80 = np.percentile(k_map, 80)
 
-        # 3. 创建画布 (左图：排序曲线，右图：密度分布)
+        # 3. Create canvas (left: sorted curve, right: density distribution)
         fig, axes = plt.subplots(1, 2, figsize=(15, 6))
         
         # ==========================
-        # 图 1: 排序后的 K 值曲线 (Sorted Line Chart)
+        # Figure 1: Sorted K-value curve (Sorted Line Chart)
         # ==========================
-        # 作用：直观展示 Token 难度的增长趋势，方便找截断点
+        # Purpose: intuitively show the growth trend of Token difficulty and help choose a cutoff point
         sorted_k = np.sort(k_map)
         x_axis = np.arange(len(sorted_k))
         
         ax1 = axes[0]
         ax1.plot(x_axis, sorted_k, color='#1f77b4', linewidth=2, label='Sorted k values')
         
-        # 标注关键线
+        # Mark key lines
         ax1.axhline(mean_val, color='red', linestyle='--', alpha=0.7, label=f'Mean: {mean_val:.4f}')
         ax1.axvline(4096 * 0.2, color='green', linestyle=':', alpha=0.7, label=f'20% (Easy): k={p20:.2f}')
         ax1.axvline(4096 * 0.8, color='orange', linestyle=':', alpha=0.7, label=f'80% (Hard): k={p80:.2f}')
         
-        # 填充区域 (模拟你的策略)
+        # Fill regions (simulate your strategy)
         ax1.fill_between(x_axis, 0, sorted_k, where=(x_axis < 4096*0.2), color='green', alpha=0.1)
         ax1.fill_between(x_axis, 0, sorted_k, where=(x_axis > 4096*0.8), color='orange', alpha=0.1)
 
@@ -1483,12 +1483,12 @@ class ShortCut_taylorseer(ShortCut):
         ax1.grid(True, alpha=0.3)
 
         # ==========================
-        # 图 2: 分布密度图 (Distribution Density)
+        # Figure 2: Distribution density plot (Distribution Density)
         # ==========================
-        # 作用：展示 k 值主要集中在哪个区间
+        # Purpose: show where k values are mainly concentrated
         ax2 = axes[1]
         
-        # 尝试使用 Seaborn 画平滑曲线 (KDE)，如果没有则用 Matplotlib 直方图
+        # Try to use Seaborn for a smooth KDE curve; if unavailable, use a Matplotlib histogram
         try:
             sns.kdeplot(k_map, ax=ax2, fill=True, color="purple", alpha=0.3, linewidth=2)
             ax2.set_ylabel("Density")
@@ -1497,7 +1497,7 @@ class ShortCut_taylorseer(ShortCut):
             ax2.hist(k_map, bins=50, color='purple', alpha=0.5, density=True)
             ax2.set_ylabel("Frequency")
 
-        # 标注均值
+        # Mark the mean
         ax2.axvline(mean_val, color='red', linestyle='--', label='Mean')
         ax2.axvline(median_val, color='blue', linestyle='-.', label='Median')
         
@@ -1506,7 +1506,7 @@ class ShortCut_taylorseer(ShortCut):
         ax2.legend()
         ax2.grid(True, alpha=0.3)
 
-        # 4. 保存
+        # 4. Save
         plt.tight_layout()
         plt.savefig(save_path, dpi=150)
         print(f"K-Map statistics plot saved to: {save_path}")
@@ -1515,17 +1515,17 @@ class ShortCut_taylorseer(ShortCut):
         print(f"   [Quantile] 80% quantile (hard threshold): {p80:.4f}")
         plt.close()
 
-    # 根据均值分点
+    # Split points based on the mean
     def save_kmap_to_html_mean(self, k_map, save_path="k_map_mean_based.html", multipliers=(1.25, 1.5, 2.0)):
         """
-        基于均值倍率可视化 K-Map。
+        Visualize K-Map based on mean multipliers.
         Args:
-            k_map: 输入数据 (4096 flattened or 16x16x16)
-            save_path: 保存路径
-            multipliers: 一个包含3个浮点数的元组，分别对应三档阈值的倍率。
-                        默认 (1.0, 1.5, 2.0) 代表 >均值, >1.5倍均值, >2倍均值。
+            k_map: Input data (4096 flattened or 16x16x16)
+            save_path: Save path
+            multipliers: A tuple containing 3 floats, corresponding to the multipliers for the three threshold levels.
+                        Default (1.0, 1.5, 2.0) means >mean, >1.5x mean, >2x mean.
         """
-        # --- 1. 数据预处理 ---
+        # --- 1. Data preprocessing ---
         if isinstance(k_map, torch.Tensor):
             k_data = k_map.detach().cpu().numpy()
         else:
@@ -1536,27 +1536,27 @@ class ShortCut_taylorseer(ShortCut):
             print(f"Error: expected 4096 points, got {k_data.size}.")
             return
 
-        # 恢复 3D 结构并取绝对值
+        # Restore the 3D structure and take absolute values
         volume = k_data.reshape(16, 16, 16)
         vals_abs = np.abs(volume).flatten()
         
-        # 计算统计指标
+        # Compute statistical metrics
         mean_val = np.mean(vals_abs)
         max_val = np.max(vals_abs)
         
-        # 防止全0数据的除法错误
+        # Prevent division errors for all-zero data
         if mean_val == 0:
             print("Warning: data mean is 0; heatmap cannot be generated.")
             return
 
-        # --- 2. 基于均值的分箱逻辑 ---
-        # 解包倍率参数
+        # --- 2. Mean-based binning logic ---
+        # Unpack multiplier parameters
         m1, m2, m3 = multipliers
         
-        # 初始化 bins，默认为 0 (隐藏/背景)
+        # Initialize bins, defaulting to 0 (hidden/background)
         bins = np.zeros_like(vals_abs, dtype=int)
         
-        # 逻辑：数值越大，Bin ID 越高，后者覆盖前者
+        # Logic: larger values get higher Bin IDs; later assignments override earlier ones
         # Bin 1: > 1.0 * Mean
         bins[vals_abs >= mean_val * m1] = 1
         # Bin 2: > 1.5 * Mean
@@ -1564,23 +1564,23 @@ class ShortCut_taylorseer(ShortCut):
         # Bin 3: > 2.0 * Mean
         bins[vals_abs >= mean_val * m3] = 3
         
-        # 总共有 4 种状态：0(小于均值), 1(一档), 2(二档), 3(三档)
+        # There are 4 states in total: 0 (below mean), 1 (level 1), 2 (level 2), 3 (level 3)
         num_bins = 4 
 
-        # --- 3. 生成坐标并过滤 ---
+        # --- 3. Generate coordinates and filter ---
         X, Y, Z = np.mgrid[0:16, 0:16, 0:16]
         X, Y, Z = X.flatten(), Y.flatten(), Z.flatten()
         
-        # 过滤：只显示大于均值点 (即 bins >= 1)
-        # 如果你想连小于均值的也显示，可以改这里，但在3D散点图中通常只看高响应区
+        # Filter: show only points above the mean (that is, bins >= 1)
+        # Change this if you also want to show below-mean points, but 3D scatter plots usually focus on high-response regions
         valid_mask = bins >= 1
         
         X_f, Y_f, Z_f = X[valid_mask], Y[valid_mask], Z[valid_mask]
         bins_f = bins[valid_mask]
         vals_f = vals_abs[valid_mask]
 
-        # --- 4. 定义颜色映射 (3档区分) ---
-        # 0: Hidden (不显示), 1: Blue/Cyan, 2: Orange, 3: Red
+        # --- 4. Define color mapping (3-level distinction) ---
+        # 0: Hidden (not shown), 1: Blue/Cyan, 2: Orange, 3: Red
         colors_hex = [
             '#ffffbf',
             '#fdae61',
@@ -1588,19 +1588,19 @@ class ShortCut_taylorseer(ShortCut):
             '#a50026',
         ]
         
-        # 构建离散 Colorscale
+        # Build discrete Colorscale
         step_colorscale = []
         for i in range(num_bins):
             step_colorscale.append([i / num_bins, colors_hex[i]])
             step_colorscale.append([(i + 1) / num_bins, colors_hex[i]])
 
-        # --- 5. 创建 Plotly 图形 ---
+        # --- 5. Create Plotly figure ---
         fig = go.Figure(data=[go.Scatter3d(
             x=X_f, y=Y_f, z=Z_f,
             mode='markers',
             marker=dict(
                 symbol='square',
-                size=6, #稍微调大一点点以便观察
+                size=6, # slightly increase for easier viewing
                 color=bins_f,
                 colorscale=step_colorscale,
                 cmin=0,
@@ -1608,7 +1608,7 @@ class ShortCut_taylorseer(ShortCut):
                 opacity=0.9,
                 colorbar=dict(
                     title="Mean Multiplier",
-                    tickvals=[1.5, 2.5, 3.5], # 刻度位置在色块中间
+                    tickvals=[1.5, 2.5, 3.5], # tick positions are centered in the color blocks
                     ticktext=[
                         f">{m1}x Mean", 
                         f">{m2}x Mean", 
@@ -1617,12 +1617,12 @@ class ShortCut_taylorseer(ShortCut):
                     tickfont=dict(color="white"),
                 )
             ),
-            # Hover 信息显示：具体数值 + 是均值的多少倍
+            # Hover info: exact value + multiple of the mean
             text=[f"Val: {v:.4f}<br>Ratio: {v/mean_val:.2f}x Mean" for v in vals_f],
             hoverinfo='text'
         )])
 
-        # --- 6. 布局优化 ---
+        # --- 6. Layout optimization ---
         fig.update_layout(
             title=f"Mean-Based K-Map (Mean={mean_val:.4f})",
             scene=dict(

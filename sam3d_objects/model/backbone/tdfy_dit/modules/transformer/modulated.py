@@ -283,15 +283,15 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
         return h * multiplier.unsqueeze(1)
 
     # This is stupid, _pytree does not support ModuleDict
-    # 🛠️ 修复 1: 让 _moduledict_to_dict 自动对齐 x 的 keys
+    # Fix 1: make _moduledict_to_dict automatically align with x keys
     def _moduledict_to_dict(self, module_dict, ref_dict=None):
         if isinstance(module_dict, torch.nn.ModuleDict):
             raw_dict = {k: v for k, v in module_dict.items()}
         else:
             raw_dict = module_dict
         
-        # 如果传入了参考字典 x，只返回 x 里有的 key
-        # 这样 tree_map 就永远不会因为结构不匹配而报错了！
+        # If a reference dictionary x is passed, return only keys present in x
+        # This prevents tree_map from failing due to structure mismatch
         if ref_dict is not None and isinstance(ref_dict, dict):
             return {k: raw_dict[k] for k in ref_dict.keys() if k in raw_dict}
         return raw_dict
@@ -350,13 +350,13 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
     #     return x
 
     def _forward_token_fast(self, x: Dict, mod: torch.Tensor, context: torch.Tensor):
-            # 定义计时器
+            # Define timer
             t_prep = CudaTimer("1. Prep")
             t_msa  = CudaTimer("2. MSA Block")
             t_mca  = CudaTimer("3. MCA Block")
             t_mlp  = CudaTimer("4. MLP Block")
 
-            # ================= 1. Prep (准备参数) =================
+            # ================= 1. Prep (prepare parameters) =================
             with t_prep:
                 if self.share_mod:
                     shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = mod.chunk(6, dim=1)
@@ -373,20 +373,20 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
                 shift_mlp = shift_mlp.unsqueeze(1)
                 gate_mlp  = gate_mlp.unsqueeze(1)
 
-                # 提取数据
+                # Extract data
                 h_shape = x.get('shape')
                 h_rot = x.get('6drotation_normalized')
 
             # ================= 2. MSA (Self-Attention) =================
             with t_msa:
-                # Shape 分支
+                # Shape branch
                 if h_shape is not None:
                     res_shape = h_shape
                     h_shape = self.norm1['shape'](h_shape)
                     # h * (1 + scale) + shift
                     h_shape = h_shape * (1 + scale_msa) + shift_msa
                 
-                # Rot 分支
+                # Rot branch
                 if h_rot is not None:
                     res_rot = h_rot
                     h_rot = self.norm1['6drotation_normalized'](h_rot)
@@ -397,10 +397,10 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
                 if h_shape is not None: attn_in['shape'] = h_shape
                 if h_rot is not None: attn_in['6drotation_normalized'] = h_rot
                 
-                # 这里是真正的大计算
+                # This is the actual heavy computation
                 attn_out = self.self_attn(attn_in)
                 
-                # Residual + Gate (融合计算)
+                # Residual + Gate (fusion computation)
                 if h_shape is not None:
                     h_shape = attn_out['shape']
                     h_shape = torch.addcmul(res_shape, h_shape, gate_msa)
@@ -440,21 +440,21 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
                     h_rot = self.mlp['6drotation_normalized'](h_rot)
                     h_rot = torch.addcmul(res_rot, h_rot, gate_mlp)
 
-            # ================= 打印报告 (调试用) =================
-            # ⚠️ 注意：report() 会触发 synchronize，这会轻微拖慢整体流水线
-            # 正式训练时建议注释掉打印
+            # ================= Print report (for debugging) =================
+            # Note: report() triggers synchronize, which slightly slows the overall pipeline
+            # Comment out printing for formal training
             # print(f"[FastPath] Prep: {t_prep.report():.3f} | MSA: {t_msa.report():.3f} | MCA: {t_mca.report():.3f} | MLP: {t_mlp.report():.3f} | Total: {t_prep.report()+t_msa.report()+t_mca.report()+t_mlp.report():.3f} ms")
 
-            # 返回
+            # Return
             out = {}
             if h_shape is not None: out['shape'] = h_shape
             if h_rot is not None: out['6drotation_normalized'] = h_rot
             return out
 
 
-    # 原来的通用 _forward (修复了报错)
+    # Original generic _forward (fixed the error)
     def _forward(self, x: Dict, mod: torch.Tensor, context: torch.Tensor):
-        # ... (AdaLN chunk 代码同上) ...
+        # ... (AdaLN chunk code is the same as above) ...
         if self.share_mod:
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = mod.chunk(6, dim=1)
         else:
@@ -462,7 +462,7 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
                 self.adaLN_modulation(mod).chunk(6, dim=1)
             )
 
-        # 🛠️ 关键修改：传入 x 作为参考，过滤 norm1 的 keys
+        # Key change: pass x as a reference and filter norm1 keys
         h = _pytree.tree_map(self._apply_module, x, self._moduledict_to_dict(self.norm1, ref_dict=x))
         
         h = _pytree.tree_map(
@@ -477,7 +477,7 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
         x = _pytree.tree_map(self._apply_add, x, h)
         
         # MCA
-        # 🛠️ 关键修改：传入 h 或 x 作为参考
+        # Key change: pass h or x as a reference
         h = _pytree.tree_map(self._apply_module, x, self._moduledict_to_dict(self.norm2, ref_dict=x))
         h = _pytree.tree_map(
             partial(self._apply_cross_attn, context=context),
@@ -487,7 +487,7 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
         x = _pytree.tree_map(self._apply_add, x, h)
 
         # MLP
-        # 🛠️ 关键修改：传入 x 作为参考
+        # Key change: pass x as a reference
         h = _pytree.tree_map(self._apply_module, x, self._moduledict_to_dict(self.norm3, ref_dict=x))
         h = _pytree.tree_map(
             partial(self._apply_mlp, scale_mlp=scale_mlp, shift_mlp=shift_mlp),
@@ -506,14 +506,14 @@ class MOTModulatedTransformerCrossBlock(nn.Module):
 
     def forward(self, x: Dict, mod: torch.Tensor, context: torch.Tensor):
             # Token pruning mode can pass a small key subset, so use the fast path.
-            # 这里的判断条件 loose 一点，只要是字典且小于3个key就走 fast path
+            # The condition here is looser: use the fast path as long as it is a dictionary with fewer than 3 keys
             if not self.use_checkpoint and isinstance(x, dict) and len(x) <= 2:
-                # 确保只有 shape 或 rot 才能进 fast path，防止其他 key 报错
+                # Ensure only shape or rot enters the fast path to prevent other keys from failing
                 valid_keys = {'shape', '6drotation_normalized'}
                 if all(k in valid_keys for k in x.keys()):
                     return self._forward_token_fast(x, mod, context)
 
-            # 兜底：走修复后的通用通道
+            # Fallback: use the fixed generic path
             if self.use_checkpoint:
                 return torch.utils.checkpoint.checkpoint(
                     self._forward, x, mod, context, use_reentrant=False
@@ -535,5 +535,5 @@ class CudaTimer:
         self.end.record()
         
     def report(self):
-        torch.cuda.synchronize() # 强制同步，确保时间准确
+        torch.cuda.synchronize() # Force synchronization to ensure accurate timing
         return self.start.elapsed_time(self.end)
