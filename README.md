@@ -333,6 +333,16 @@ This project is built upon the excellent [SAM3D](https://github.com/facebookrese
 This project is released under the [MIT License](LICENSE).
 
 ---
+## Star History
+
+<a href="https://www.star-history.com/?repos=wlfeng0509%2FFast-SAM3D&type=date&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=wlfeng0509/Fast-SAM3D&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=wlfeng0509/Fast-SAM3D&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=wlfeng0509/Fast-SAM3D&type=date&legend=top-left" />
+ </picture>
+</a>
+---
 
 ## 📧 Contact
 
