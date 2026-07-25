@@ -187,7 +187,7 @@ rm -rf checkpoints/${TAG}-download
 
 **Moge**
 
-Moge model download link: https://huggingface.co/Ruicheng/moge-2-vitl-normal/tree/main
+Moge model download link: https://huggingface.co/Ruicheng/moge-vitl
 
 Modify the weight path of `depth_model` in `pipeline.yaml`.
 
